@@ -1,0 +1,8 @@
+.claude
+.idea
+.pytest_cache
+__pycache__
+react-components
+/target
+.env
+frontend

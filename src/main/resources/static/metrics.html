@@ -1,0 +1,480 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Metrik Yonetimi - Sistem Izleme</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600;700&family=Barlow+Condensed:wght@500;600;700&display=swap" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
+    <link href="assets/app.css" rel="stylesheet">
+    <style>
+        pre.payload-preview {
+            background: var(--bg);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 0.5rem 0.75rem;
+            font-size: 0.8rem;
+            max-height: 120px;
+            overflow: auto;
+            margin: 0;
+            color: var(--text);
+        }
+        tbody tr { transition: background-color 1.5s ease; }
+        .pagination-bar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+            margin-top: 0.75rem;
+        }
+    </style>
+</head>
+<body>
+<div id="topbar-root"></div>
+<div class="app-body">
+<div id="sidebar-root"></div>
+<main class="app-main">
+<div class="container-fluid pb-5">
+    <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-4">
+        <h1 class="h4 mb-0">Metrik Yonetimi</h1>
+        <a href="metric-groups.html" class="btn btn-outline-primary btn-sm"><i class="bi bi-collection-fill"></i> Metrik Gruplarini Yonet</a>
+    </div>
+
+    <!-- Metrik Kataloğu -->
+    <div class="card mb-4">
+        <div class="card-body">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <h2 class="section-title mb-0">Metrik Katalogu <span id="pendingApprovalBadge" class="badge bg-warning text-dark d-none"></span></h2>
+                <div class="d-flex gap-2">
+                    <button id="addDefinitionBtn" class="btn btn-primary btn-sm d-none" data-bs-toggle="modal" data-bs-target="#definitionModal">
+                        + Metrik Tanimi Ekle
+                    </button>
+                </div>
+            </div>
+            <div id="definitionsAlert" class="alert alert-danger d-none"></div>
+            <div class="table-responsive">
+                <table class="table align-middle">
+                    <thead>
+                        <tr>
+                            <th>Ad</th>
+                            <th>Anahtar</th>
+                            <th>Kategori</th>
+                            <th>Komut</th>
+                            <th>Onay Durumu</th>
+                            <th class="text-end">Islem</th>
+                        </tr>
+                    </thead>
+                    <tbody id="definitionsTableBody">
+                        <tr><td colspan="6" class="text-muted">Yukleniyor...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+            <div id="definitionsPagination" class="pagination-bar"></div>
+        </div>
+    </div>
+</div>
+</main>
+</div>
+
+<!-- Metrik Tanimi Ekle/Duzenle Modal -->
+<div class="modal fade" id="definitionModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="definitionModalTitle">Metrik Tanimi Ekle</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div id="definitionModalAlert" class="alert alert-danger d-none"></div>
+                <form id="definitionForm">
+                    <input type="hidden" id="definitionId">
+                    <div class="mb-3">
+                        <label class="form-label">Ad</label>
+                        <input type="text" class="form-control" id="metricName" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Anahtar (metricKey)</label>
+                        <input type="text" class="form-control" id="metricKey" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Kategori</label>
+                        <input type="text" class="form-control" id="metricCategory" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Calistirilacak Komut</label>
+                        <input type="text" class="form-control font-monospace" id="metricCommand" placeholder="orn: cat /proc/loadavg" required>
+                    </div>
+                    <div class="row g-2">
+                        <div class="col-6">
+                            <label class="form-label">Zaman Asimi / Timeout (sn)</label>
+                            <input type="number" class="form-control" id="metricTimeout" min="1" value="3" required>
+                        </div>
+                        <div class="col-6">
+                            <label class="form-label">Deger Tipi</label>
+                            <select class="form-select" id="metricValueType" required>
+                                <option value="RAW">Ham Metin</option>
+                                <option value="NUMERIC">Sayisal</option>
+                                <option value="LINE_COUNT">Satir Sayisi</option>
+                                <option value="MATCH_COUNT">Eslesme Sayisi</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="mb-3 mt-2">
+                        <label class="form-label">Ayiklama Deseni / Regex (extractPattern)</label>
+                        <input type="text" class="form-control" id="metricPattern" placeholder="orn: ^([0-9.]+) - Sayisal/Eslesme Sayisi tipleri icin kullanilir">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Aciklama</label>
+                        <textarea class="form-control" id="metricDescription" rows="2"></textarea>
+                    </div>
+                    <button type="submit" class="btn btn-primary w-100">Kaydet</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Metrik Tanimi Reddet Modal (Admin) -->
+<div class="modal fade" id="rejectDefinitionModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Metrik Tanimini Reddet</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div id="rejectDefinitionAlert" class="alert alert-danger d-none"></div>
+                <form id="rejectDefinitionForm">
+                    <div class="mb-3">
+                        <label class="form-label">Reddetme Gerekcesi</label>
+                        <textarea class="form-control" id="rejectionReason" rows="3" required></textarea>
+                    </div>
+                    <button type="submit" class="btn btn-danger w-100">Reddet</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<script src="assets/auth.js"></script>
+<script src="assets/nav.js"></script>
+<script src="assets/toast.js"></script>
+<script>
+    requireAuth();
+
+    const role = getRole();
+    const canManage = role === 'OPERATOR' || role === 'ADMIN';
+    // Metric definition edit (PUT) is ADMIN-only - OPERATOR keeps create
+    // (subject to approval).
+    const canEditDefinitions = role === 'ADMIN';
+
+    renderShell('metrics');
+    if (canManage) {
+        document.getElementById('addDefinitionBtn').classList.remove('d-none');
+    }
+    // ---------------- Sayfalama yardimcisi ----------------
+
+    function createPaginator(tbodyEl, paginationEl, renderRowFn, emptyMessage) {
+        let rows = [];
+        let pageSize = 10;
+        let currentPage = 1;
+
+        function totalPages() {
+            return Math.max(1, Math.ceil(rows.length / pageSize));
+        }
+
+        function renderControls() {
+            if (rows.length === 0) {
+                paginationEl.innerHTML = '';
+                return;
+            }
+            const pages = totalPages();
+            paginationEl.innerHTML = `
+                <div class="d-flex align-items-center gap-2">
+                    <label class="form-label mb-0 small text-muted">Sayfa basina kayit</label>
+                    <select class="form-select form-select-sm" style="width:auto" data-role="page-size">
+                        ${[5, 10, 25, 50, 100].map(n => `<option value="${n}" ${n === pageSize ? 'selected' : ''}>${n}</option>`).join('')}
+                    </select>
+                </div>
+                <nav>
+                    <ul class="pagination pagination-sm mb-0">
+                        <li class="page-item ${currentPage === 1 ? 'disabled' : ''}"><button type="button" class="page-link" data-role="first">Ilk</button></li>
+                        <li class="page-item ${currentPage === 1 ? 'disabled' : ''}"><button type="button" class="page-link" data-role="prev">Onceki</button></li>
+                        <li class="page-item disabled"><span class="page-link">Sayfa ${currentPage} / ${pages}</span></li>
+                        <li class="page-item ${currentPage === pages ? 'disabled' : ''}"><button type="button" class="page-link" data-role="next">Sonraki</button></li>
+                        <li class="page-item ${currentPage === pages ? 'disabled' : ''}"><button type="button" class="page-link" data-role="last">Son</button></li>
+                    </ul>
+                </nav>
+            `;
+            paginationEl.querySelector('[data-role="page-size"]').addEventListener('change', (e) => {
+                pageSize = Number(e.target.value);
+                currentPage = 1;
+                render();
+            });
+            const go = (page) => { currentPage = page; render(); };
+            paginationEl.querySelector('[data-role="first"]').addEventListener('click', () => go(1));
+            paginationEl.querySelector('[data-role="prev"]').addEventListener('click', () => go(Math.max(1, currentPage - 1)));
+            paginationEl.querySelector('[data-role="next"]').addEventListener('click', () => go(Math.min(totalPages(), currentPage + 1)));
+            paginationEl.querySelector('[data-role="last"]').addEventListener('click', () => go(totalPages()));
+        }
+
+        function render() {
+            if (rows.length === 0) {
+                tbodyEl.innerHTML = emptyMessage;
+                paginationEl.innerHTML = '';
+                return;
+            }
+            const pages = totalPages();
+            if (currentPage > pages) currentPage = pages;
+            const start = (currentPage - 1) * pageSize;
+            tbodyEl.innerHTML = '';
+            rows.slice(start, start + pageSize).forEach(row => tbodyEl.appendChild(renderRowFn(row)));
+            renderControls();
+        }
+
+        return {
+            setRows(newRows) {
+                rows = newRows;
+                currentPage = 1;
+                render();
+            },
+        };
+    }
+
+    // ---------------- Metrik Tanimlari (Katalog) ----------------
+
+    let definitionsById = {};
+
+    const APPROVAL_LABELS = { APPROVED: 'Onaylandi', PENDING_APPROVAL: 'Onay Bekliyor', REJECTED: 'Reddedildi' };
+
+    function renderDefinitionRow(d) {
+        const tr = document.createElement('tr');
+        const editAction = canEditDefinitions
+            ? `<button class="btn btn-outline-secondary btn-sm me-1" data-action="edit-def" data-id="${d.id}">Duzenle</button>`
+            : '';
+        const deleteAction = canManage
+            ? `<button class="btn btn-outline-danger btn-sm me-1" data-action="delete-def" data-id="${d.id}">Sil</button>`
+            : '';
+        const manageActions = editAction + deleteAction;
+        const approvalActions = (role === 'ADMIN' && d.approvalStatus === 'PENDING_APPROVAL')
+            ? `<button class="btn btn-outline-success btn-sm me-1" data-action="approve-def" data-id="${d.id}">✅ Onayla</button>
+               <button class="btn btn-outline-danger btn-sm me-1" data-action="reject-def" data-id="${d.id}">❌ Reddet</button>`
+            : '';
+        const approvalTitle = d.approvalStatus === 'REJECTED' && d.rejectionReason
+            ? ` title="${escapeHtml(d.rejectionReason)}"` : '';
+        tr.innerHTML = `
+            <td>${escapeHtml(d.name)}</td>
+            <td><code>${escapeHtml(d.metricKey)}</code></td>
+            <td>${escapeHtml(d.category)}</td>
+            <td><code>${escapeHtml(d.command)}</code></td>
+            <td${approvalTitle}><span class="badge badge-approval-${d.approvalStatus}">${APPROVAL_LABELS[d.approvalStatus] || d.approvalStatus}</span></td>
+            <td class="text-end">${approvalActions}${manageActions}</td>
+        `;
+        if (canEditDefinitions) {
+            tr.querySelector('[data-action="edit-def"]').addEventListener('click', () => openDefinitionModal(definitionsById[d.id]));
+        }
+        if (canManage) {
+            tr.querySelector('[data-action="delete-def"]').addEventListener('click', () => deleteDefinition(d.id));
+        }
+        if (role === 'ADMIN' && d.approvalStatus === 'PENDING_APPROVAL') {
+            tr.querySelector('[data-action="approve-def"]').addEventListener('click', () => approveDefinition(d.id));
+            tr.querySelector('[data-action="reject-def"]').addEventListener('click', () => openRejectModal(d.id));
+        }
+        return tr;
+    }
+
+    const definitionsPaginator = createPaginator(
+        document.getElementById('definitionsTableBody'),
+        document.getElementById('definitionsPagination'),
+        renderDefinitionRow,
+        '<tr><td colspan="6" class="text-muted">Henuz metrik tanimi yok</td></tr>'
+    );
+
+    async function loadDefinitions() {
+        const alertEl = document.getElementById('definitionsAlert');
+        alertEl.classList.add('d-none');
+        try {
+            const res = await authFetch('/api/metric-definitions');
+            if (!res.ok) throw new Error('failed');
+            const definitions = await res.json();
+
+            definitionsById = {};
+            definitions.forEach(d => { definitionsById[d.id] = d; });
+
+            definitionsPaginator.setRows(definitions);
+            updatePendingApprovalBadge(definitions);
+        } catch (err) {
+            document.getElementById('definitionsTableBody').innerHTML =
+                '<tr><td colspan="6" class="text-muted">Yuklenemedi</td></tr>';
+            document.getElementById('definitionsPagination').innerHTML = '';
+        }
+    }
+
+    function updatePendingApprovalBadge(definitions) {
+        const badge = document.getElementById('pendingApprovalBadge');
+        if (role !== 'ADMIN') {
+            badge.classList.add('d-none');
+            return;
+        }
+        const count = definitions.filter(d => d.approvalStatus === 'PENDING_APPROVAL').length;
+        if (count === 0) {
+            badge.classList.add('d-none');
+            return;
+        }
+        badge.textContent = `${count} onay bekliyor`;
+        badge.classList.remove('d-none');
+    }
+
+    async function approveDefinition(id) {
+        if (!(await showConfirm('Bu metrik tanimini onaylamak istediginize emin misiniz?'))) return;
+        const alertEl = document.getElementById('definitionsAlert');
+        try {
+            const res = await authFetch(`/api/metric-definitions/${id}/approve`, { method: 'POST' });
+            if (!res.ok) {
+                const data = await res.json().catch(() => ({}));
+                alertEl.textContent = data.error || 'Onaylama basarisiz';
+                alertEl.classList.remove('d-none');
+                return;
+            }
+            await loadDefinitions();
+        } catch (err) {
+            alertEl.textContent = 'Sunucuya baglanilamadi';
+            alertEl.classList.remove('d-none');
+        }
+    }
+
+    let pendingRejectDefinitionId = null;
+
+    function openRejectModal(id) {
+        pendingRejectDefinitionId = id;
+        document.getElementById('rejectDefinitionAlert').classList.add('d-none');
+        document.getElementById('rejectDefinitionForm').reset();
+        bootstrap.Modal.getOrCreateInstance(document.getElementById('rejectDefinitionModal')).show();
+    }
+
+    document.getElementById('rejectDefinitionForm').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const alertEl = document.getElementById('rejectDefinitionAlert');
+        alertEl.classList.add('d-none');
+        try {
+            const res = await authFetch(`/api/metric-definitions/${pendingRejectDefinitionId}/reject`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ rejectionReason: document.getElementById('rejectionReason').value }),
+            });
+            const data = await res.json().catch(() => ({}));
+            if (!res.ok) {
+                alertEl.textContent = data.error || 'Reddetme basarisiz';
+                alertEl.classList.remove('d-none');
+                return;
+            }
+            bootstrap.Modal.getInstance(document.getElementById('rejectDefinitionModal')).hide();
+            pendingRejectDefinitionId = null;
+            await loadDefinitions();
+        } catch (err) {
+            alertEl.textContent = 'Sunucuya baglanilamadi';
+            alertEl.classList.remove('d-none');
+        }
+    });
+
+    function openDefinitionModal(definition) {
+        const modalTitle = document.getElementById('definitionModalTitle');
+        document.getElementById('definitionModalAlert').classList.add('d-none');
+        if (definition) {
+            modalTitle.textContent = 'Metrik Tanimini Duzenle';
+            document.getElementById('definitionId').value = definition.id;
+            document.getElementById('metricName').value = definition.name;
+            document.getElementById('metricKey').value = definition.metricKey;
+            document.getElementById('metricCategory').value = definition.category;
+            document.getElementById('metricCommand').value = definition.command;
+            document.getElementById('metricTimeout').value = definition.timeoutSeconds;
+            document.getElementById('metricValueType').value = definition.valueType;
+            document.getElementById('metricPattern').value = definition.extractPattern || '';
+            document.getElementById('metricDescription').value = definition.description || '';
+        } else {
+            modalTitle.textContent = 'Metrik Tanimi Ekle';
+            document.getElementById('definitionForm').reset();
+            document.getElementById('definitionId').value = '';
+            document.getElementById('metricTimeout').value = 3;
+        }
+        bootstrap.Modal.getOrCreateInstance(document.getElementById('definitionModal')).show();
+    }
+
+    document.getElementById('addDefinitionBtn').addEventListener('click', () => openDefinitionModal(null));
+
+    document.getElementById('definitionForm').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const alertEl = document.getElementById('definitionModalAlert');
+        alertEl.classList.add('d-none');
+
+        const id = document.getElementById('definitionId').value;
+        const payload = {
+            name: document.getElementById('metricName').value,
+            metricKey: document.getElementById('metricKey').value,
+            category: document.getElementById('metricCategory').value,
+            command: document.getElementById('metricCommand').value,
+            timeoutSeconds: Number(document.getElementById('metricTimeout').value) || 3,
+            valueType: document.getElementById('metricValueType').value,
+            extractPattern: document.getElementById('metricPattern').value.trim() || null,
+            description: document.getElementById('metricDescription').value,
+        };
+
+        try {
+            const res = await authFetch(id ? `/api/metric-definitions/${id}` : '/api/metric-definitions', {
+                method: id ? 'PUT' : 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload),
+            });
+            const data = await res.json().catch(() => ({}));
+            if (!res.ok) {
+                alertEl.textContent = data.error || 'Kaydetme basarisiz';
+                alertEl.classList.remove('d-none');
+                return;
+            }
+            bootstrap.Modal.getInstance(document.getElementById('definitionModal')).hide();
+            await loadDefinitions();
+        } catch (err) {
+            alertEl.textContent = 'Sunucuya baglanilamadi';
+            alertEl.classList.remove('d-none');
+        }
+    });
+
+    async function deleteDefinition(id) {
+        if (!(await showConfirm('Bu metrik tanimini silmek istediginize emin misiniz?', { danger: true, confirmLabel: 'Sil' }))) return;
+        const alertEl = document.getElementById('definitionsAlert');
+        try {
+            const res = await authFetch(`/api/metric-definitions/${id}`, { method: 'DELETE' });
+            if (!res.ok) {
+                const data = await res.json().catch(() => ({}));
+                alertEl.textContent = data.error || 'Silme basarisiz (muhtemelen bir grup tarafindan kullaniliyor)';
+                alertEl.classList.remove('d-none');
+                return;
+            }
+            await loadDefinitions();
+        } catch (err) {
+            alertEl.textContent = 'Sunucuya baglanilamadi';
+            alertEl.classList.remove('d-none');
+        }
+    }
+
+    // ---------------- Yardimcilar ----------------
+
+    function escapeHtml(value) {
+        if (value === null || value === undefined) return '';
+        return String(value)
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;');
+    }
+
+    // ---------------- Baslangic ----------------
+
+    loadDefinitions();
+</script>
+</body>
+</html>

@@ -1,0 +1,36 @@
+# ==========================================================================
+# systemd unit for monitoring-poc (Spring Boot jar).
+#
+# Install:
+#   sudo mkdir -p /opt/monitoring-poc /etc/monitoring-poc
+#   sudo cp target/monitoring-poc.jar /opt/monitoring-poc/monitoring-poc.jar
+#   sudo cp scripts/monitoring-poc.env.example /etc/monitoring-poc/monitoring-poc.env
+#   sudo chmod 600 /etc/monitoring-poc/monitoring-poc.env   # holds secrets
+#   # edit /etc/monitoring-poc/monitoring-poc.env with real values
+#   sudo cp scripts/monitoring-poc.service /etc/systemd/system/monitoring-poc.service
+#   sudo systemctl daemon-reload
+#   sudo systemctl enable --now monitoring-poc
+#
+# Logs:  journalctl -u monitoring-poc -f
+# Redeploy after a new build: sudo cp target/monitoring-poc.jar /opt/monitoring-poc/ && sudo systemctl restart monitoring-poc
+# ==========================================================================
+
+[Unit]
+Description=Monitoring PoC (Spring Boot)
+After=network.target postgresql.service
+
+[Service]
+Type=simple
+User=monitoring-poc
+Group=monitoring-poc
+EnvironmentFile=/etc/monitoring-poc/monitoring-poc.env
+ExecStart=/usr/bin/java -jar /opt/monitoring-poc/monitoring-poc.jar
+WorkingDirectory=/opt/monitoring-poc
+Restart=on-failure
+RestartSec=5
+# Journald captures stdout/stderr automatically - no need for -File based logging here.
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target

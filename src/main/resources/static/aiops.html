@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Takip & Analiz - Sistem Izleme</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600;700&family=Barlow+Condensed:wght@500;600;700&display=swap" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
+    <link href="assets/app.css" rel="stylesheet">
+    <link href="assets/aiops.css" rel="stylesheet">
+</head>
+<body>
+<div id="topbar-root"></div>
+<div class="app-body">
+<div id="sidebar-root"></div>
+<main class="app-main">
+<div class="container-fluid pb-5">
+    <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-4">
+        <div>
+            <h1 class="h4 mb-1">AI Takip & Analiz</h1>
+            <p class="text-muted mb-0">Sectiginiz metrik gruplarini yerel yapay zeka ile izleyin, kok neden analizi ve gunluk saglik ozeti alin</p>
+        </div>
+    </div>
+
+    <div class="row g-4">
+        <!-- ============================================================ -->
+        <!-- SOL: Metrik grubu secimi, nobetci/e-posta ayarlari, anomaliler -->
+        <!-- ============================================================ -->
+        <div class="col-lg-5">
+
+            <div class="card mb-4">
+                <div class="card-body">
+                    <h2 class="section-title mb-1"><i class="bi bi-diagram-3"></i> Izlenecek Metrik Gruplari</h2>
+                    <p class="text-muted small mb-3">Once bir sunucu secin, o sunucuya ait metrik gruplarindan sadece secili olanlar arka planda AI tarafindan taranir.</p>
+                    <div class="mb-3">
+                        <label for="metricGroupServerSelect" class="form-label small mb-1">Sunucu</label>
+                        <select id="metricGroupServerSelect" class="form-select form-select-sm"></select>
+                    </div>
+                    <div id="metricGroupsList" class="aiops-scroll-list">
+                        <p class="text-muted small mb-0">Yukleniyor...</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card mb-4">
+                <div class="card-body">
+                    <h2 class="section-title mb-3"><i class="bi bi-bell"></i> Akilli Nobetci & E-Posta Ayarlari</h2>
+
+                    <div class="form-check form-switch d-flex justify-content-between align-items-center py-2 border-bottom">
+                        <label class="form-check-label" for="alertEnabledSwitch">Kritik anomali tespitinde anlik bildirim e-postasi gonder</label>
+                        <input class="form-check-input flex-shrink-0" type="checkbox" role="switch" id="alertEnabledSwitch">
+                    </div>
+
+                    <div id="alertEmailWrap" class="mt-3 d-none">
+                        <label for="alertEmailInput" class="form-label small">Alarm E-posta Adresi</label>
+                        <div class="input-group">
+                            <span class="input-group-text"><i class="bi bi-envelope"></i></span>
+                            <input type="email" id="alertEmailInput" class="form-control" placeholder="ornek@sirket.com">
+                        </div>
+                    </div>
+
+                    <div class="form-check form-switch d-flex justify-content-between align-items-center py-2 border-bottom mt-3">
+                        <label class="form-check-label" for="dailySummarySwitch">Gunluk Sistem Sagligi Ozeti Gonder (Her sabah 08:00)</label>
+                        <input class="form-check-input flex-shrink-0" type="checkbox" role="switch" id="dailySummarySwitch">
+                    </div>
+
+                    <button type="button" id="saveConfigBtn" class="btn btn-primary w-100 mt-3">
+                        <i class="bi bi-save" id="saveConfigBtnIcon"></i>
+                        Ayarlari Kaydet & AI Takibini Baslat
+                    </button>
+                    <div id="saveStatus" class="small mt-2"></div>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-body">
+                    <h2 class="section-title mb-3"><i class="bi bi-stars"></i> Canli Anomali ve Kok Neden Kartlari</h2>
+                    <div id="anomaliesList" class="aiops-scroll-list">
+                        <p class="text-muted small mb-0">Yukleniyor...</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ============================================================ -->
+        <!-- SAG: Gomulu AI Asistan & ChatOps                              -->
+        <!-- ============================================================ -->
+        <div class="col-lg-7">
+            <div class="card aiops-chat-card">
+                <div class="card-body d-flex flex-column">
+
+                    <div class="d-flex justify-content-between align-items-start flex-wrap gap-2 mb-3">
+                        <div class="d-flex align-items-center gap-2">
+                            <div class="aiops-chat-icon"><i class="bi bi-robot"></i></div>
+                            <div>
+                                <div class="fw-semibold">AIOps Asistan</div>
+                                <div class="text-muted small">qwen2.5-coder:1.5b &bull; Air-Gapped / Local</div>
+                            </div>
+                        </div>
+                        <div class="d-flex align-items-center gap-2">
+                            <span class="badge bg-primary" id="activeMetricBadge">0 Grup Bagli</span>
+                            <button type="button" id="refreshMetricsBtn" class="btn btn-outline-secondary btn-sm" title="Anomalileri Yenile">
+                                <i class="bi bi-arrow-repeat" id="refreshMetricsBtnIcon"></i>
+                            </button>
+                            <button type="button" id="clearChatBtn" class="btn btn-outline-danger btn-sm" title="Sohbeti Temizle">
+                                <i class="bi bi-trash"></i>
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="chatScopeSelect" class="form-label small mb-1">Sohbet kapsami</label>
+                        <select id="chatScopeSelect" class="form-select form-select-sm">
+                            <option value="">Genel (Tum Izlenen Gruplar)</option>
+                        </select>
+                    </div>
+
+                    <div class="quick-prompts mb-3">
+                        <button type="button" class="btn btn-outline-primary btn-sm quick-prompt-btn" data-prompt="Secili metrik grubunda su an olagandisi bir durum var mi?">Olagandisi durum var mi?</button>
+                        <button type="button" class="btn btn-outline-primary btn-sm quick-prompt-btn" data-prompt="Son 24 saatte en cok hata firlatan servis ve kok nedeni nedir?">Son 24 saatte en cok hata veren servis?</button>
+                        <button type="button" class="btn btn-outline-primary btn-sm quick-prompt-btn" data-prompt="Sistem genel saglik durumunu ve dun geceden bu yana olusan anomalileri ozetle.">Genel saglik ozeti</button>
+                    </div>
+
+                    <div id="chatMessages" class="chat-messages mb-3"></div>
+
+                    <div class="d-flex gap-2 align-items-end">
+                        <textarea id="chatInput" class="form-control chat-textarea" rows="1" placeholder="Bir soru yazin... (Enter ile gonder)"></textarea>
+                        <button type="button" id="sendChatBtn" class="btn btn-primary chat-send-btn">
+                            <i class="bi bi-send"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+</main>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<script src="assets/auth.js"></script>
+<script src="assets/nav.js"></script>
+<script>requireAuth(); renderShell('aiops');</script>
+<script src="assets/aiops.js"></script>
+</body>
+</html>

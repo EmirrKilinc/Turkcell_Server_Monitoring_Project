@@ -1,0 +1,436 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sistem Izleme Paneli</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600;700&family=Barlow+Condensed:wght@500;600;700&display=swap" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
+    <link href="assets/app.css" rel="stylesheet">
+    <style>
+        .progress {
+            height: 10px;
+            border-radius: 6px;
+        }
+        #statusBadge.online {
+            background-color: #198754 !important;
+        }
+        #statusBadge.offline {
+            background-color: #dc3545 !important;
+        }
+        #lastUpdate {
+            color: var(--text-muted);
+            font-size: 0.9rem;
+        }
+        #historyChart {
+            max-height: 260px;
+        }
+    </style>
+</head>
+<body>
+<div id="topbar-root"></div>
+<div class="app-body">
+<div id="sidebar-root"></div>
+<main class="app-main">
+<div class="container-fluid pb-5">
+    <div class="app-header d-flex justify-content-between align-items-center flex-wrap gap-3">
+        <div>
+            <h1 class="h4 mb-1">Sunucu Metrikleri</h1>
+            <p class="text-muted mb-0">CPU / RAM / Disk kullanimini canli izleyin</p>
+        </div>
+        <span id="statusBadge" class="badge bg-secondary">Baglanti bekleniyor</span>
+    </div>
+
+    <div class="card metric-card mb-4">
+        <div class="card-body d-flex flex-wrap gap-3 align-items-end">
+            <div class="flex-grow-1">
+                <label for="serverSelect" class="form-label fw-semibold">Sunucu Secin</label>
+                <select id="serverSelect" class="form-select">
+                    <option value="">-- Sunucu listesi yukleniyor --</option>
+                </select>
+            </div>
+            <button id="addServerBtn" class="btn btn-primary d-none" data-bs-toggle="modal" data-bs-target="#provisionModal">
+                + Sunucu Ekle
+            </button>
+            <button id="removeServerBtn" class="btn btn-outline-danger d-none" data-bs-toggle="modal" data-bs-target="#deleteModal">
+                Sunucuyu Kaldir
+            </button>
+        </div>
+    </div>
+
+    <div class="metrics-grid mb-4">
+        <div class="card metric-card d-none" id="approvalsCard">
+            <div class="card-body">
+                <div class="metric-label mb-2"><i class="bi bi-hourglass-split"></i> Onay Bekleyen</div>
+                <div class="metric-value" id="pendingApprovalsValue">--</div>
+                <div class="text-muted small mt-2">Metrik talebi + profil degisikligi</div>
+            </div>
+        </div>
+        <div class="card metric-card">
+            <div class="card-body">
+                <div class="metric-label mb-2">CPU Kullanimi</div>
+                <div class="metric-value" id="cpuValue">--%</div>
+                <div class="progress mt-3">
+                    <div id="cpuBar" class="progress-bar bg-primary" role="progressbar" style="width: 0%"></div>
+                </div>
+            </div>
+        </div>
+        <div class="card metric-card">
+            <div class="card-body">
+                <div class="metric-label mb-2">RAM Kullanimi</div>
+                <div class="metric-value" id="ramValue">--%</div>
+                <div class="progress mt-3">
+                    <div id="ramBar" class="progress-bar bg-success" role="progressbar" style="width: 0%"></div>
+                </div>
+            </div>
+        </div>
+        <div class="card metric-card">
+            <div class="card-body">
+                <div class="metric-label mb-2">Disk Kullanimi</div>
+                <div class="metric-value" id="diskValue">--%</div>
+                <div class="progress mt-3">
+                    <div id="diskBar" class="progress-bar bg-warning" role="progressbar" style="width: 0%"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="text-center mt-4 mb-4">
+        <span id="lastUpdate">Son Guncelleme Zamani: --</span>
+    </div>
+
+    <div class="card metric-card">
+        <div class="card-body">
+            <div class="section-title mb-3"><i class="bi bi-graph-up"></i> Kullanim Gecmisi</div>
+            <canvas id="historyChart"></canvas>
+        </div>
+    </div>
+</div>
+</main>
+</div>
+
+<!-- Sunucu Ekle Modal (zero-persistence SSH provisioning) -->
+<div class="modal fade" id="provisionModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Sunucu Ekle</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p class="text-muted small">
+                    Root sifresi yalnizca bu tek istek sirasinda bellekte kullanilir; veritabaninda veya loglarda
+                    hicbir zaman saklanmaz. Kurulum sonunda sunucuya bir daha root ile baglanilmaz - agent, bu
+                    islem sirasinda otomatik olusturulan/sertlestirilen ve interaktif oturum acamayan
+                    (nologin/false shell) kisitli <code>monitoring_user</code> hesabi altinda calisir.
+                </p>
+                <div id="provisionAlert" class="alert alert-danger d-none"></div>
+                <form id="provisionForm">
+                    <div class="mb-3">
+                        <label class="form-label">Hedef IP</label>
+                        <input type="text" class="form-control" id="provisionIp" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">SSH Kullanici Adi</label>
+                        <input type="text" class="form-control" id="provisionUsername" value="root" required>
+                        <div class="form-text">
+                            Yalnizca bu tek seferlik kurulum icin gerekli (monitoring_user hesabini
+                            olusturmak/sertlestirmek ve agent dosyalarini yuklemek amaciyla). Sifre asla
+                            saklanmaz; kurulumdan sonra agent daima monitoring_user olarak calisir.
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">SSH Sifresi</label>
+                        <input type="password" class="form-control" id="provisionPassword" required>
+                    </div>
+                    <button type="submit" class="btn btn-primary w-100" id="provisionSubmitBtn">Kur ve Ekle</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Sunucuyu Kaldir Modal (secondary password confirmation) -->
+<div class="modal fade" id="deleteModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Sunucuyu Kaldir</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p>Bu islem seçili sunucunun secret key'ini iptal edecek; agent bir sonraki gonderiminde 403 alip kendini sonlandiracak.</p>
+                <div id="deleteAlert" class="alert alert-danger d-none"></div>
+                <form id="deleteForm">
+                    <div class="mb-3">
+                        <label class="form-label">Sifrenizi Onaylayin</label>
+                        <input type="password" class="form-control" id="deletePassword" required>
+                    </div>
+                    <button type="submit" class="btn btn-danger w-100">Kaldirmayi Onayla</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
+<script src="assets/auth.js"></script>
+<script src="assets/nav.js"></script>
+<script>
+    requireAuth();
+
+    const POLL_INTERVAL_MS = 3000;
+    const role = getRole();
+
+    renderShell('dashboard');
+    if (role === 'ADMIN' || role === 'OPERATOR') {
+        document.getElementById('addServerBtn').classList.remove('d-none');
+    }
+    if (role === 'ADMIN') {
+        document.getElementById('removeServerBtn').classList.remove('d-none');
+        loadPendingApprovalsCount();
+    }
+
+    async function loadPendingApprovalsCount() {
+        try {
+            const [definitionsRes, changeRequestsRes] = await Promise.all([
+                authFetch('/api/metric-definitions'),
+                authFetch('/api/profile/change-requests/pending'),
+            ]);
+            const definitions = definitionsRes.ok ? await definitionsRes.json() : [];
+            const changeRequests = changeRequestsRes.ok ? await changeRequestsRes.json() : [];
+            const pendingMetrics = definitions.filter(d => d.approvalStatus === 'PENDING_APPROVAL').length;
+            const total = pendingMetrics + changeRequests.length;
+
+            document.getElementById('pendingApprovalsValue').textContent = total;
+            document.getElementById('approvalsCard').classList.remove('d-none');
+        } catch (err) {
+            // sessizce vazgec - dashboard ozeti kritik degil
+        }
+    }
+
+    const serverSelect = document.getElementById('serverSelect');
+    const statusBadge = document.getElementById('statusBadge');
+    const cpuValue = document.getElementById('cpuValue');
+    const ramValue = document.getElementById('ramValue');
+    const diskValue = document.getElementById('diskValue');
+    const cpuBar = document.getElementById('cpuBar');
+    const ramBar = document.getElementById('ramBar');
+    const diskBar = document.getElementById('diskBar');
+    const lastUpdate = document.getElementById('lastUpdate');
+    const removeServerBtn = document.getElementById('removeServerBtn');
+
+    let pollTimer = null;
+
+    const historyChart = new Chart(document.getElementById('historyChart'), {
+        type: 'line',
+        data: {
+            labels: [],
+            datasets: [
+                { label: 'CPU %', data: [], borderColor: '#3f7cae', backgroundColor: 'rgba(63,124,174,0.12)', tension: 0.3 },
+                { label: 'RAM %', data: [], borderColor: '#1a8f5e', backgroundColor: 'rgba(26,143,94,0.12)', tension: 0.3 },
+                { label: 'Disk %', data: [], borderColor: '#b8791a', backgroundColor: 'rgba(184,121,26,0.12)', tension: 0.3 },
+            ],
+        },
+        options: {
+            responsive: true,
+            scales: { y: { min: 0, max: 100 } },
+            plugins: { legend: { position: 'bottom' } },
+        },
+    });
+
+    async function fetchHistory() {
+        const hostname = serverSelect.value;
+        if (!hostname) return;
+        try {
+            const res = await authFetch(`/api/metrics/${encodeURIComponent(hostname)}/history`);
+            if (!res.ok) throw new Error('Gecmis alinamadi');
+            const points = (await res.json()).slice().reverse();
+
+            historyChart.data.labels = points.map(p => new Date(p.createdAt).toLocaleTimeString('tr-TR'));
+            historyChart.data.datasets[0].data = points.map(p => p.cpuPercent);
+            historyChart.data.datasets[1].data = points.map(p => p.ramPercent);
+            historyChart.data.datasets[2].data = points.map(p => p.diskPercent);
+            historyChart.update();
+        } catch (err) {
+            // sessizce vazgec - gecmis grafigi kritik degil
+        }
+    }
+
+    function setStatus(online) {
+        statusBadge.textContent = online ? 'Bagli' : 'Baglanti yok';
+        statusBadge.classList.remove('online', 'offline', 'bg-secondary');
+        statusBadge.classList.add(online ? 'online' : 'offline');
+    }
+
+    function barColor(barEl, percent) {
+        barEl.classList.remove('bg-primary', 'bg-success', 'bg-warning', 'bg-danger');
+        if (percent >= 90) barEl.classList.add('bg-danger');
+        else if (percent >= 70) barEl.classList.add('bg-warning');
+        else barEl.classList.add('bg-success');
+    }
+
+    function updateCard(valueEl, barEl, percent) {
+        const safePercent = Math.max(0, Math.min(100, percent ?? 0));
+        valueEl.textContent = safePercent.toFixed(1) + '%';
+        barEl.style.width = safePercent + '%';
+        barColor(barEl, safePercent);
+    }
+
+    let serverIdByHostname = {};
+
+    async function loadServers() {
+        try {
+            const res = await authFetch('/api/servers');
+            if (!res.ok) throw new Error('Sunucu listesi alinamadi');
+            const servers = await res.json();
+
+            serverIdByHostname = {};
+            serverSelect.innerHTML = '';
+
+            if (servers.length === 0) {
+                serverSelect.innerHTML = '<option value="">Henuz kayitli sunucu yok</option>';
+                removeServerBtn.disabled = true;
+                return;
+            }
+
+            servers.forEach(s => {
+                serverIdByHostname[s.hostname] = s.id;
+                const opt = document.createElement('option');
+                opt.value = s.hostname;
+                opt.textContent = s.hostname;
+                serverSelect.appendChild(opt);
+            });
+
+            startPolling();
+        } catch (err) {
+            serverSelect.innerHTML = '<option value="">Sunucu listesi yuklenemedi</option>';
+        }
+    }
+
+    async function fetchMetrics() {
+        const hostname = serverSelect.value;
+        if (!hostname) return;
+
+        try {
+            const res = await authFetch(`/api/metrics/${encodeURIComponent(hostname)}`);
+            if (!res.ok) throw new Error('Metrik alinamadi');
+            const data = await res.json();
+
+            updateCard(cpuValue, cpuBar, data.cpuPercent);
+            updateCard(ramValue, ramBar, data.ramPercent);
+            updateCard(diskValue, diskBar, data.diskPercent);
+
+            const updatedAt = data.createdAt ? new Date(data.createdAt) : new Date();
+            lastUpdate.textContent = 'Son Guncelleme Zamani: ' + updatedAt.toLocaleString('tr-TR');
+            setStatus(true);
+        } catch (err) {
+            setStatus(false);
+        }
+    }
+
+    function startPolling() {
+        if (pollTimer) clearInterval(pollTimer);
+        fetchMetrics();
+        fetchHistory();
+        pollTimer = setInterval(() => { fetchMetrics(); fetchHistory(); }, POLL_INTERVAL_MS);
+    }
+
+    serverSelect.addEventListener('change', startPolling);
+    loadServers();
+
+    // ---- Sunucu Ekle (SSH provisioning) ----
+    const provisionForm = document.getElementById('provisionForm');
+    const provisionAlert = document.getElementById('provisionAlert');
+    const provisionSubmitBtn = document.getElementById('provisionSubmitBtn');
+
+    provisionForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        provisionAlert.classList.add('d-none');
+        provisionSubmitBtn.disabled = true;
+        provisionSubmitBtn.textContent = 'Kuruluyor...';
+
+        const ip = document.getElementById('provisionIp').value;
+        const sshUsername = document.getElementById('provisionUsername').value;
+        const sshPassword = document.getElementById('provisionPassword').value;
+
+        try {
+            const res = await authFetch('/api/servers/provision', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ ip, sshUsername, sshPassword }),
+            });
+
+            // Clear the password field immediately regardless of outcome.
+            document.getElementById('provisionPassword').value = '';
+
+            const data = await res.json().catch(() => ({}));
+
+            if (!res.ok) {
+                provisionAlert.textContent = data.error || 'Kurulum basarisiz';
+                provisionAlert.classList.remove('d-none');
+                return;
+            }
+
+            provisionForm.reset();
+            bootstrap.Modal.getInstance(document.getElementById('provisionModal')).hide();
+            await loadServers();
+        } catch (err) {
+            document.getElementById('provisionPassword').value = '';
+            provisionAlert.textContent = 'Sunucuya baglanilamadi';
+            provisionAlert.classList.remove('d-none');
+        } finally {
+            provisionSubmitBtn.disabled = false;
+            provisionSubmitBtn.textContent = 'Kur ve Ekle';
+        }
+    });
+
+    // ---- Sunucuyu Kaldir (secondary password confirmation) ----
+    const deleteForm = document.getElementById('deleteForm');
+    const deleteAlert = document.getElementById('deleteAlert');
+
+    deleteForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        deleteAlert.classList.add('d-none');
+
+        const hostname = serverSelect.value;
+        const serverId = serverIdByHostname[hostname];
+        const password = document.getElementById('deletePassword').value;
+
+        if (!serverId) {
+            deleteAlert.textContent = 'Once bir sunucu secin';
+            deleteAlert.classList.remove('d-none');
+            return;
+        }
+
+        try {
+            const res = await authFetch(`/api/servers/${serverId}`, {
+                method: 'DELETE',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ password }),
+            });
+
+            document.getElementById('deletePassword').value = '';
+
+            if (!res.ok) {
+                const data = await res.json().catch(() => ({}));
+                deleteAlert.textContent = data.error || 'Kaldirma basarisiz';
+                deleteAlert.classList.remove('d-none');
+                return;
+            }
+
+            deleteForm.reset();
+            bootstrap.Modal.getInstance(document.getElementById('deleteModal')).hide();
+            await loadServers();
+        } catch (err) {
+            document.getElementById('deletePassword').value = '';
+            deleteAlert.textContent = 'Sunucuya baglanilamadi';
+            deleteAlert.classList.remove('d-none');
+        }
+    });
+</script>
+</body>
+</html>

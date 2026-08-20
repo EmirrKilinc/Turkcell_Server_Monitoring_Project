@@ -1,0 +1,8 @@
+target/
+.idea/
+*.iml
+.git/
+agent.py
+requirements.txt
+scripts/
+tests/

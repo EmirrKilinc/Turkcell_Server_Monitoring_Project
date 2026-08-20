@@ -1,0 +1,406 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Yapilandirma Takibi - Sistem Izleme</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600;700&family=Barlow+Condensed:wght@500;600;700&display=swap" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
+    <link href="assets/app.css" rel="stylesheet">
+    <style>
+        .pagination-bar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+            margin-top: 0.75rem;
+        }
+    </style>
+</head>
+<body>
+<div id="topbar-root"></div>
+<div class="app-body">
+<div id="sidebar-root"></div>
+<main class="app-main">
+<div class="container-fluid pb-5">
+    <h1 class="h4 mb-4">Yapilandirma Takibi</h1>
+
+    <div class="card mb-4">
+        <div class="card-body">
+            <div class="d-flex justify-content-between align-items-center flex-wrap gap-3 mb-3">
+                <h2 class="section-title mb-0">Takip Edilen Dosyalar</h2>
+                <div class="d-flex align-items-end gap-2">
+                    <div>
+                        <label class="form-label fw-semibold mb-1">Sunucu</label>
+                        <div id="serverFilterSelect" style="min-width: 220px;"></div>
+                    </div>
+                    <button id="refreshTrackedFilesBtn" class="btn btn-outline-secondary btn-sm">🔄 Yenile</button>
+                    <button id="addTrackedFileBtn" class="btn btn-primary btn-sm d-none" data-bs-toggle="modal" data-bs-target="#trackedFileModal">
+                        + Dosya Ekle
+                    </button>
+                </div>
+            </div>
+            <div id="trackedFilesAlert" class="alert alert-danger d-none"></div>
+            <div class="table-responsive">
+                <table class="table align-middle">
+                    <thead>
+                        <tr>
+                            <th>Etiket</th>
+                            <th>Yol</th>
+                            <th>Durum</th>
+                            <th>Son Kontrol</th>
+                            <th class="text-end">Islem</th>
+                        </tr>
+                    </thead>
+                    <tbody id="trackedFilesTableBody">
+                        <tr><td colspan="5" class="text-muted">Once bir sunucu secin</td></tr>
+                    </tbody>
+                </table>
+            </div>
+            <div id="trackedFilesPagination" class="pagination-bar"></div>
+        </div>
+    </div>
+</div>
+</main>
+</div>
+
+<!-- Dosya Ekle Modal -->
+<div class="modal fade" id="trackedFileModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Takip Edilecek Dosya Ekle</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div id="trackedFileModalAlert" class="alert alert-danger d-none"></div>
+                <form id="trackedFileForm">
+                    <div class="mb-3">
+                        <label class="form-label">Etiket</label>
+                        <input type="text" class="form-control" id="trackedFileLabel" placeholder="orn: Agent Konfigurasyonu" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Dosya Yolu</label>
+                        <input type="text" class="form-control" id="trackedFilePath" placeholder="/data01/monitoring/agent_config.json" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Kontrol Araligi (saniye)</label>
+                        <input type="number" class="form-control" id="trackedFileInterval" min="1" value="60" required>
+                    </div>
+                    <button type="submit" class="btn btn-primary w-100">Kaydet</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Dosya Sil Onay Modal -->
+<div class="modal fade" id="deleteTrackedFileModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Dosyayi Takipten Cikar</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p>Bu dosyayi ve tum versiyon gecmisini silmek istediginize emin misiniz?</p>
+                <button id="confirmDeleteTrackedFileBtn" class="btn btn-danger w-100">Sil</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<script src="assets/auth.js"></script>
+<script src="assets/nav.js"></script>
+<script src="assets/toast.js"></script>
+<script src="assets/custom-select.js"></script>
+<script>
+    requireAuth();
+
+    const role = getRole();
+    const canManage = role === 'OPERATOR' || role === 'ADMIN';
+
+    renderShell('configs');
+    if (canManage) {
+        document.getElementById('addTrackedFileBtn').classList.remove('d-none');
+    }
+
+    // ---------------- Sayfalama yardimcisi (metrics.html ile ayni desen) ----------------
+
+    function createPaginator(tbodyEl, paginationEl, renderRowFn, emptyMessage) {
+        let rows = [];
+        let pageSize = 10;
+        let currentPage = 1;
+
+        function totalPages() {
+            return Math.max(1, Math.ceil(rows.length / pageSize));
+        }
+
+        function renderControls() {
+            if (rows.length === 0) {
+                paginationEl.innerHTML = '';
+                return;
+            }
+            const pages = totalPages();
+            paginationEl.innerHTML = `
+                <div class="d-flex align-items-center gap-2">
+                    <label class="form-label mb-0 small text-muted">Sayfa basina kayit</label>
+                    <select class="form-select form-select-sm" style="width:auto" data-role="page-size">
+                        ${[5, 10, 25, 50, 100].map(n => `<option value="${n}" ${n === pageSize ? 'selected' : ''}>${n}</option>`).join('')}
+                    </select>
+                </div>
+                <nav>
+                    <ul class="pagination pagination-sm mb-0">
+                        <li class="page-item ${currentPage === 1 ? 'disabled' : ''}"><button type="button" class="page-link" data-role="first">Ilk</button></li>
+                        <li class="page-item ${currentPage === 1 ? 'disabled' : ''}"><button type="button" class="page-link" data-role="prev">Onceki</button></li>
+                        <li class="page-item disabled"><span class="page-link">Sayfa ${currentPage} / ${pages}</span></li>
+                        <li class="page-item ${currentPage === pages ? 'disabled' : ''}"><button type="button" class="page-link" data-role="next">Sonraki</button></li>
+                        <li class="page-item ${currentPage === pages ? 'disabled' : ''}"><button type="button" class="page-link" data-role="last">Son</button></li>
+                    </ul>
+                </nav>
+            `;
+            paginationEl.querySelector('[data-role="page-size"]').addEventListener('change', (e) => {
+                pageSize = Number(e.target.value);
+                currentPage = 1;
+                render();
+            });
+            const go = (page) => { currentPage = page; render(); };
+            paginationEl.querySelector('[data-role="first"]').addEventListener('click', () => go(1));
+            paginationEl.querySelector('[data-role="prev"]').addEventListener('click', () => go(Math.max(1, currentPage - 1)));
+            paginationEl.querySelector('[data-role="next"]').addEventListener('click', () => go(Math.min(totalPages(), currentPage + 1)));
+            paginationEl.querySelector('[data-role="last"]').addEventListener('click', () => go(totalPages()));
+        }
+
+        function render() {
+            if (rows.length === 0) {
+                tbodyEl.innerHTML = emptyMessage;
+                paginationEl.innerHTML = '';
+                return;
+            }
+            const pages = totalPages();
+            if (currentPage > pages) currentPage = pages;
+            const start = (currentPage - 1) * pageSize;
+            tbodyEl.innerHTML = '';
+            rows.slice(start, start + pageSize).forEach(row => tbodyEl.appendChild(renderRowFn(row)));
+            renderControls();
+        }
+
+        return {
+            setRows(newRows) {
+                rows = newRows;
+                currentPage = 1;
+                render();
+            },
+        };
+    }
+
+    // ---------------- Sunucular ----------------
+
+    const serverFilterSelect = createCustomSelect(document.getElementById('serverFilterSelect'), {
+        placeholder: '-- Sunucu listesi yukleniyor --',
+        onChange: () => loadTrackedFiles(),
+    });
+    let trackedFilesById = {};
+
+    async function loadServers() {
+        try {
+            const res = await authFetch('/api/servers');
+            if (!res.ok) throw new Error('failed');
+            const servers = await res.json();
+
+            if (servers.length === 0) {
+                serverFilterSelect.disable('Henuz kayitli sunucu yok');
+                return;
+            }
+            serverFilterSelect.setOptions(servers.map(s => ({ value: s.id, label: s.hostname })), '-- Sunucu secin --');
+        } catch (err) {
+            serverFilterSelect.disable('Sunucu listesi yuklenemedi');
+        }
+    }
+
+    document.getElementById('refreshTrackedFilesBtn').addEventListener('click', () => loadTrackedFiles());
+
+    // ---------------- Takip Edilen Dosyalar ----------------
+
+    const CFG_STATUS_LABELS = {
+        PENDING: 'Bekliyor', IN_SYNC: 'Senkronize', DRIFT_DETECTED: 'Degisiklik Algilandi',
+        FILE_NOT_FOUND: 'Dosya Bulunamadi', PERMISSION_DENIED: 'Erisim Reddedildi',
+    };
+
+    function renderTrackedFileRow(f) {
+        const tr = document.createElement('tr');
+        const checkNowAction = canManage
+            ? `<button class="btn btn-outline-secondary btn-sm me-1" data-action="check-now" data-id="${f.id}">🔄 Simdi Kontrol Et</button>`
+            : '';
+        const acceptBaselineAction = (canManage && f.status === 'DRIFT_DETECTED')
+            ? `<button class="btn btn-outline-warning btn-sm me-1" data-action="accept-baseline" data-id="${f.id}">🛡️ Degisikligi Onayla</button>`
+            : '';
+        const manageActions = canManage
+            ? `<button class="btn btn-outline-danger btn-sm" data-action="delete-file" data-id="${f.id}">Sil</button>`
+            : '';
+        tr.innerHTML = `
+            <td>${escapeHtml(f.fileLabel)}</td>
+            <td><code>${escapeHtml(f.filePath)}</code></td>
+            <td><span class="badge badge-cfg-${f.status}">${CFG_STATUS_LABELS[f.status] || f.status}</span></td>
+            <td>${f.lastCheckedAt ? new Date(f.lastCheckedAt).toLocaleString('tr-TR') : '<span class="text-muted">Hic kontrol edilmedi</span>'}</td>
+            <td class="text-end">
+                <a class="btn btn-outline-primary btn-sm me-1" href="config-history.html?id=${f.id}&label=${encodeURIComponent(f.fileLabel)}">Versiyonlar & Fark</a>
+                ${checkNowAction}${acceptBaselineAction}${manageActions}
+            </td>
+        `;
+        if (canManage) {
+            tr.querySelector('[data-action="check-now"]').addEventListener('click', () => checkNow(f.id));
+            tr.querySelector('[data-action="delete-file"]').addEventListener('click', () => openDeleteModal(f.id));
+            const acceptBtn = tr.querySelector('[data-action="accept-baseline"]');
+            if (acceptBtn) {
+                acceptBtn.addEventListener('click', () => acceptBaseline(f.id));
+            }
+        }
+        return tr;
+    }
+
+    async function checkNow(id) {
+        try {
+            const res = await authFetch(`/api/configs/tracked-files/${id}/check-now`, { method: 'POST' });
+            if (!res.ok) throw new Error('failed');
+            showToast('Kontrol talebi gonderildi, ajan bir sonraki dongude (~15 sn) isleyecek.', 'success');
+            await loadTrackedFiles();
+        } catch (err) {
+            document.getElementById('trackedFilesAlert').textContent = 'Kontrol talebi gonderilemedi';
+            document.getElementById('trackedFilesAlert').classList.remove('d-none');
+        }
+    }
+
+    async function acceptBaseline(id) {
+        if (!(await showConfirm('Bu degisikligi yeni baseline olarak onaylamak istediginize emin misiniz?'))) return;
+        try {
+            const res = await authFetch(`/api/configs/tracked-files/${id}/accept-baseline`, { method: 'POST' });
+            if (!res.ok) throw new Error('failed');
+            await loadTrackedFiles();
+        } catch (err) {
+            document.getElementById('trackedFilesAlert').textContent = 'Onaylama basarisiz';
+            document.getElementById('trackedFilesAlert').classList.remove('d-none');
+        }
+    }
+
+    const trackedFilesPaginator = createPaginator(
+        document.getElementById('trackedFilesTableBody'),
+        document.getElementById('trackedFilesPagination'),
+        renderTrackedFileRow,
+        '<tr><td colspan="5" class="text-muted">Bu sunucu icin takip edilen dosya yok</td></tr>'
+    );
+
+    async function loadTrackedFiles() {
+        const serverId = serverFilterSelect.getValue();
+        const alertEl = document.getElementById('trackedFilesAlert');
+        alertEl.classList.add('d-none');
+
+        if (!serverId) {
+            document.getElementById('trackedFilesTableBody').innerHTML =
+                '<tr><td colspan="5" class="text-muted">Once bir sunucu secin</td></tr>';
+            document.getElementById('trackedFilesPagination').innerHTML = '';
+            return;
+        }
+
+        try {
+            const res = await authFetch(`/api/configs/tracked-files?serverId=${serverId}`);
+            if (!res.ok) throw new Error('failed');
+            const files = await res.json();
+
+            trackedFilesById = {};
+            files.forEach(f => { trackedFilesById[f.id] = f; });
+            trackedFilesPaginator.setRows(files);
+        } catch (err) {
+            document.getElementById('trackedFilesTableBody').innerHTML =
+                '<tr><td colspan="5" class="text-muted">Yuklenemedi</td></tr>';
+        }
+    }
+
+    document.getElementById('addTrackedFileBtn').addEventListener('click', () => {
+        if (!serverFilterSelect.getValue()) {
+            showToast('Once bir sunucu secin', 'warning');
+            return;
+        }
+        document.getElementById('trackedFileModalAlert').classList.add('d-none');
+        document.getElementById('trackedFileForm').reset();
+        document.getElementById('trackedFileInterval').value = 60;
+        bootstrap.Modal.getOrCreateInstance(document.getElementById('trackedFileModal')).show();
+    });
+
+    document.getElementById('trackedFileForm').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const alertEl = document.getElementById('trackedFileModalAlert');
+        alertEl.classList.add('d-none');
+
+        const payload = {
+            serverId: Number(serverFilterSelect.getValue()),
+            filePath: document.getElementById('trackedFilePath').value,
+            fileLabel: document.getElementById('trackedFileLabel').value,
+            checkIntervalSeconds: Number(document.getElementById('trackedFileInterval').value),
+        };
+
+        try {
+            const res = await authFetch('/api/configs/tracked-files', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload),
+            });
+            const data = await res.json().catch(() => ({}));
+            if (!res.ok) {
+                alertEl.textContent = data.error || 'Kaydetme basarisiz';
+                alertEl.classList.remove('d-none');
+                return;
+            }
+            bootstrap.Modal.getInstance(document.getElementById('trackedFileModal')).hide();
+            await loadTrackedFiles();
+        } catch (err) {
+            alertEl.textContent = 'Sunucuya baglanilamadi';
+            alertEl.classList.remove('d-none');
+        }
+    });
+
+    let pendingDeleteFileId = null;
+
+    function openDeleteModal(id) {
+        pendingDeleteFileId = id;
+        bootstrap.Modal.getOrCreateInstance(document.getElementById('deleteTrackedFileModal')).show();
+    }
+
+    document.getElementById('confirmDeleteTrackedFileBtn').addEventListener('click', async () => {
+        if (!pendingDeleteFileId) return;
+        try {
+            const res = await authFetch(`/api/configs/tracked-files/${pendingDeleteFileId}`, { method: 'DELETE' });
+            if (!res.ok) {
+                const data = await res.json().catch(() => ({}));
+                document.getElementById('trackedFilesAlert').textContent = data.error || 'Silme basarisiz';
+                document.getElementById('trackedFilesAlert').classList.remove('d-none');
+            } else {
+                await loadTrackedFiles();
+            }
+        } finally {
+            pendingDeleteFileId = null;
+            bootstrap.Modal.getInstance(document.getElementById('deleteTrackedFileModal')).hide();
+        }
+    });
+
+    // ---------------- Yardimcilar ----------------
+
+    function escapeHtml(value) {
+        if (value === null || value === undefined) return '';
+        return String(value)
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;');
+    }
+
+    // ---------------- Baslangic ----------------
+
+    loadServers();
+</script>
+</body>
+</html>

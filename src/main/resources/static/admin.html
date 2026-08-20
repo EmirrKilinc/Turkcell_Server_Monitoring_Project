@@ -1,0 +1,488 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Paneli - Sistem Izleme</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600;700&family=Barlow+Condensed:wght@500;600;700&display=swap" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
+    <link href="assets/app.css" rel="stylesheet">
+    <style>
+        .provisioning-cmd { font-size: 0.85rem; }
+    </style>
+</head>
+<body>
+<div id="topbar-root"></div>
+<div class="app-body">
+<div id="sidebar-root"></div>
+<main class="app-main">
+<div class="container-fluid pb-5">
+    <h1 class="h4 mb-4">Admin Paneli</h1>
+
+    <div class="card mb-4">
+        <div class="card-body">
+            <h2 class="h6 mb-3">Onay Bekleyen Kullanicilar</h2>
+            <div id="pendingAlert" class="alert alert-danger d-none"></div>
+            <div class="table-responsive">
+                <table class="table align-middle">
+                    <thead>
+                        <tr>
+                            <th>Kullanici Adi</th>
+                            <th>E-posta</th>
+                            <th>Kayit Tarihi</th>
+                            <th class="text-end">Islem</th>
+                        </tr>
+                    </thead>
+                    <tbody id="pendingTableBody">
+                        <tr><td colspan="4" class="text-muted">Yukleniyor...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <div class="card mb-4">
+        <div class="card-body">
+            <h2 class="h6 mb-3">Onay Bekleyen Profil Degisiklikleri</h2>
+            <div id="changeRequestsAlert" class="alert alert-danger d-none"></div>
+            <div class="table-responsive">
+                <table class="table align-middle">
+                    <thead>
+                        <tr>
+                            <th>Kullanici Adi</th>
+                            <th>Tur</th>
+                            <th>Yeni Deger</th>
+                            <th>Talep Tarihi</th>
+                            <th class="text-end">Islem</th>
+                        </tr>
+                    </thead>
+                    <tbody id="changeRequestsTableBody">
+                        <tr><td colspan="5" class="text-muted">Yukleniyor...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <div class="card mb-4">
+        <div class="card-body">
+            <h2 class="h6 mb-3">Tum Kullanicilar</h2>
+            <div id="allUsersAlert" class="alert alert-danger d-none"></div>
+            <div class="table-responsive">
+                <table class="table align-middle">
+                    <thead>
+                        <tr>
+                            <th>Kullanici Adi</th>
+                            <th>E-posta</th>
+                            <th>Durum</th>
+                            <th>Rol</th>
+                        </tr>
+                    </thead>
+                    <tbody id="allUsersTableBody">
+                        <tr><td colspan="4" class="text-muted">Yukleniyor...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <div class="card mt-4">
+        <div class="card-body">
+            <h2 class="h6 mb-3">Sunucu Provisioning Script Yonetimi</h2>
+            <p class="text-muted small">Yeni bir sunucu eklendiginde (root SSH ile) sirayla calistirilan komutlar. Devre disi birakilan komutlar atlanir.</p>
+            <div id="provisioningAlert" class="alert alert-danger d-none"></div>
+            <div class="table-responsive">
+                <table class="table align-middle">
+                    <thead>
+                        <tr>
+                            <th>Sira</th>
+                            <th>Aciklama</th>
+                            <th>Komut</th>
+                            <th>Aktif</th>
+                            <th class="text-end">Islem</th>
+                        </tr>
+                    </thead>
+                    <tbody id="provisioningTableBody">
+                        <tr><td colspan="5" class="text-muted">Yukleniyor...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+            <hr>
+            <h3 class="h6 mb-2">Yeni Komut Ekle</h3>
+            <form id="provisioningForm" class="row g-2 align-items-end">
+                <div class="col-md-4">
+                    <label class="form-label small">Aciklama</label>
+                    <input type="text" class="form-control form-control-sm" id="provDescription" placeholder="orn: SSH config okuma izni tanimla" required>
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label small">Komut</label>
+                    <input type="text" class="form-control form-control-sm font-monospace" id="provCommandLine" placeholder="setfacl -m u:monitoring_user:r /etc/ssh/sshd_config" required>
+                </div>
+                <div class="col-md-2">
+                    <button type="submit" class="btn btn-primary btn-sm w-100">Ekle</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+</main>
+</div>
+
+<!-- Profil Degisikligi Reddet Modal -->
+<div class="modal fade" id="rejectChangeRequestModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Degisiklik Talebini Reddet</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div id="rejectChangeRequestAlert" class="alert alert-danger d-none"></div>
+                <form id="rejectChangeRequestForm">
+                    <div class="mb-3">
+                        <label class="form-label">Reddetme Gerekcesi</label>
+                        <textarea class="form-control" id="changeRequestRejectionReason" rows="3" required></textarea>
+                    </div>
+                    <button type="submit" class="btn btn-danger w-100">Reddet</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<script src="assets/auth.js"></script>
+<script src="assets/nav.js"></script>
+<script src="assets/toast.js"></script>
+<script>
+    requireRole(['ADMIN']);
+    renderShell('admin');
+
+    const pendingTableBody = document.getElementById('pendingTableBody');
+    const allUsersTableBody = document.getElementById('allUsersTableBody');
+    const pendingAlert = document.getElementById('pendingAlert');
+    const allUsersAlert = document.getElementById('allUsersAlert');
+
+    const ROLES = ['ADMIN', 'OPERATOR', 'VIEWER'];
+
+    async function loadPendingUsers() {
+        try {
+            const res = await authFetch('/api/admin/users?status=PENDING');
+            if (!res.ok) throw new Error('failed');
+            const users = await res.json();
+
+            if (users.length === 0) {
+                pendingTableBody.innerHTML = '<tr><td colspan="4" class="text-muted">Bekleyen kullanici yok</td></tr>';
+                return;
+            }
+
+            pendingTableBody.innerHTML = '';
+            users.forEach(u => {
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td>${u.username}</td>
+                    <td>${u.email}</td>
+                    <td>${new Date(u.createdAt).toLocaleString('tr-TR')}</td>
+                    <td class="text-end">
+                        <button class="btn btn-success btn-sm" data-action="APPROVED" data-id="${u.id}">Onayla</button>
+                        <button class="btn btn-outline-danger btn-sm" data-action="REJECTED" data-id="${u.id}">Reddet</button>
+                    </td>
+                `;
+                pendingTableBody.appendChild(tr);
+            });
+
+            pendingTableBody.querySelectorAll('button[data-action]').forEach(btn => {
+                btn.addEventListener('click', () => updateStatus(btn.dataset.id, btn.dataset.action));
+            });
+        } catch (err) {
+            pendingAlert.textContent = 'Bekleyen kullanicilar yuklenemedi';
+            pendingAlert.classList.remove('d-none');
+        }
+    }
+
+    async function updateStatus(userId, status) {
+        const res = await authFetch(`/api/admin/users/${userId}/status`, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ status }),
+        });
+        if (res.ok) {
+            await loadPendingUsers();
+            await loadAllUsers();
+        }
+    }
+
+    async function updateRole(userId, role) {
+        await authFetch(`/api/admin/users/${userId}/role`, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ role }),
+        });
+    }
+
+    async function loadAllUsers() {
+        try {
+            const res = await authFetch('/api/admin/users');
+            if (!res.ok) throw new Error('failed');
+            const users = await res.json();
+
+            allUsersTableBody.innerHTML = '';
+            users.forEach(u => {
+                const tr = document.createElement('tr');
+                const roleOptions = ROLES.map(r =>
+                    `<option value="${r}" ${r === u.role ? 'selected' : ''}>${r}</option>`
+                ).join('');
+
+                tr.innerHTML = `
+                    <td>${u.username}</td>
+                    <td>${u.email}</td>
+                    <td><span class="badge bg-secondary">${u.status}</span></td>
+                    <td>
+                        <select class="form-select form-select-sm role-select" data-id="${u.id}" style="width: auto;">
+                            ${roleOptions}
+                        </select>
+                    </td>
+                `;
+                allUsersTableBody.appendChild(tr);
+            });
+
+            allUsersTableBody.querySelectorAll('.role-select').forEach(select => {
+                select.addEventListener('change', () => updateRole(select.dataset.id, select.value));
+            });
+        } catch (err) {
+            allUsersAlert.textContent = 'Kullanici listesi yuklenemedi';
+            allUsersAlert.classList.remove('d-none');
+        }
+    }
+
+    loadPendingUsers();
+    loadAllUsers();
+
+    // ---------------- Onay Bekleyen Profil Degisiklikleri ----------------
+
+    const changeRequestsTableBody = document.getElementById('changeRequestsTableBody');
+    const changeRequestsAlert = document.getElementById('changeRequestsAlert');
+    const CHANGE_TYPE_LABELS = { EMAIL: 'E-posta', PASSWORD: 'Sifre' };
+
+    async function loadPendingChangeRequests() {
+        changeRequestsAlert.classList.add('d-none');
+        try {
+            const res = await authFetch('/api/profile/change-requests/pending');
+            if (!res.ok) throw new Error('failed');
+            const requests = await res.json();
+
+            if (requests.length === 0) {
+                changeRequestsTableBody.innerHTML = '<tr><td colspan="5" class="text-muted">Bekleyen degisiklik talebi yok</td></tr>';
+                return;
+            }
+
+            changeRequestsTableBody.innerHTML = '';
+            requests.forEach(r => {
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td>${escapeHtml(r.username)}</td>
+                    <td>${CHANGE_TYPE_LABELS[r.requestType] || r.requestType}</td>
+                    <td>${r.requestType === 'EMAIL' ? escapeHtml(r.newEmail) : '<span class="text-muted">••••••••</span>'}</td>
+                    <td>${new Date(r.createdAt).toLocaleString('tr-TR')}</td>
+                    <td class="text-end">
+                        <button class="btn btn-success btn-sm" data-action="approve-change" data-id="${r.id}">Onayla</button>
+                        <button class="btn btn-outline-danger btn-sm" data-action="reject-change" data-id="${r.id}">Reddet</button>
+                    </td>
+                `;
+                changeRequestsTableBody.appendChild(tr);
+            });
+
+            changeRequestsTableBody.querySelectorAll('[data-action="approve-change"]').forEach(btn => {
+                btn.addEventListener('click', () => approveChangeRequest(btn.dataset.id));
+            });
+            changeRequestsTableBody.querySelectorAll('[data-action="reject-change"]').forEach(btn => {
+                btn.addEventListener('click', () => openRejectChangeRequestModal(btn.dataset.id));
+            });
+        } catch (err) {
+            changeRequestsAlert.textContent = 'Degisiklik talepleri yuklenemedi';
+            changeRequestsAlert.classList.remove('d-none');
+        }
+    }
+
+    async function approveChangeRequest(id) {
+        if (!(await showConfirm('Bu degisiklik talebini onaylamak istediginize emin misiniz?'))) return;
+        const res = await authFetch(`/api/profile/change-requests/${id}/approve`, { method: 'POST' });
+        if (res.ok) {
+            await loadPendingChangeRequests();
+        } else {
+            const data = await res.json().catch(() => ({}));
+            changeRequestsAlert.textContent = data.error || 'Onaylama basarisiz';
+            changeRequestsAlert.classList.remove('d-none');
+        }
+    }
+
+    let pendingRejectChangeRequestId = null;
+
+    function openRejectChangeRequestModal(id) {
+        pendingRejectChangeRequestId = id;
+        document.getElementById('rejectChangeRequestAlert').classList.add('d-none');
+        document.getElementById('rejectChangeRequestForm').reset();
+        bootstrap.Modal.getOrCreateInstance(document.getElementById('rejectChangeRequestModal')).show();
+    }
+
+    document.getElementById('rejectChangeRequestForm').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const alertEl = document.getElementById('rejectChangeRequestAlert');
+        alertEl.classList.add('d-none');
+        try {
+            const res = await authFetch(`/api/profile/change-requests/${pendingRejectChangeRequestId}/reject`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ rejectionReason: document.getElementById('changeRequestRejectionReason').value }),
+            });
+            const data = await res.json().catch(() => ({}));
+            if (!res.ok) {
+                alertEl.textContent = data.error || 'Reddetme basarisiz';
+                alertEl.classList.remove('d-none');
+                return;
+            }
+            bootstrap.Modal.getInstance(document.getElementById('rejectChangeRequestModal')).hide();
+            pendingRejectChangeRequestId = null;
+            await loadPendingChangeRequests();
+        } catch (err) {
+            alertEl.textContent = 'Sunucuya baglanilamadi';
+            alertEl.classList.remove('d-none');
+        }
+    });
+
+    loadPendingChangeRequests();
+
+    // ---------------- Sunucu Provisioning Script Yonetimi ----------------
+
+    const provisioningTableBody = document.getElementById('provisioningTableBody');
+    const provisioningAlert = document.getElementById('provisioningAlert');
+
+    function escapeHtml(value) {
+        if (value === null || value === undefined) return '';
+        return String(value)
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;');
+    }
+
+    async function loadProvisioningScripts() {
+        provisioningAlert.classList.add('d-none');
+        try {
+            const res = await authFetch('/api/provisioning-scripts');
+            if (!res.ok) throw new Error('failed');
+            const scripts = await res.json();
+
+            if (scripts.length === 0) {
+                provisioningTableBody.innerHTML = '<tr><td colspan="5" class="text-muted">Henuz komut yok</td></tr>';
+                return;
+            }
+
+            provisioningTableBody.innerHTML = '';
+            scripts.forEach((s, idx) => {
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td>${s.executionOrder}</td>
+                    <td>${escapeHtml(s.description)}</td>
+                    <td><code class="provisioning-cmd">${escapeHtml(s.commandLine)}</code></td>
+                    <td>
+                        <div class="form-check form-switch">
+                            <input class="form-check-input" type="checkbox" data-action="toggle" data-id="${s.id}" ${s.isEnabled ? 'checked' : ''}>
+                        </div>
+                    </td>
+                    <td class="text-end">
+                        <button class="btn btn-outline-secondary btn-sm me-1" data-action="move-up" data-id="${s.id}" ${idx === 0 ? 'disabled' : ''}>&uarr;</button>
+                        <button class="btn btn-outline-secondary btn-sm me-1" data-action="move-down" data-id="${s.id}" ${idx === scripts.length - 1 ? 'disabled' : ''}>&darr;</button>
+                        <button class="btn btn-outline-danger btn-sm" data-action="delete" data-id="${s.id}">Sil</button>
+                    </td>
+                `;
+                provisioningTableBody.appendChild(tr);
+            });
+
+            provisioningTableBody.querySelectorAll('[data-action="toggle"]').forEach(el => {
+                el.addEventListener('change', () => updateProvisioningScript(el.dataset.id, { isEnabled: el.checked }));
+            });
+            provisioningTableBody.querySelectorAll('[data-action="move-up"]').forEach(el => {
+                el.addEventListener('click', () => moveProvisioningScript(el.dataset.id, 'move-up'));
+            });
+            provisioningTableBody.querySelectorAll('[data-action="move-down"]').forEach(el => {
+                el.addEventListener('click', () => moveProvisioningScript(el.dataset.id, 'move-down'));
+            });
+            provisioningTableBody.querySelectorAll('[data-action="delete"]').forEach(el => {
+                el.addEventListener('click', () => deleteProvisioningScript(el.dataset.id));
+            });
+        } catch (err) {
+            provisioningAlert.textContent = 'Provisioning script listesi yuklenemedi';
+            provisioningAlert.classList.remove('d-none');
+        }
+    }
+
+    async function updateProvisioningScript(id, payload) {
+        const res = await authFetch(`/api/provisioning-scripts/${id}`, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload),
+        });
+        if (res.ok) {
+            await loadProvisioningScripts();
+        } else {
+            provisioningAlert.textContent = 'Guncelleme basarisiz';
+            provisioningAlert.classList.remove('d-none');
+        }
+    }
+
+    async function moveProvisioningScript(id, direction) {
+        const res = await authFetch(`/api/provisioning-scripts/${id}/${direction}`, { method: 'POST' });
+        if (res.ok) {
+            await loadProvisioningScripts();
+        } else {
+            const data = await res.json().catch(() => ({}));
+            provisioningAlert.textContent = data.error || 'Siralama degistirilemedi';
+            provisioningAlert.classList.remove('d-none');
+        }
+    }
+
+    async function deleteProvisioningScript(id) {
+        if (!(await showConfirm('Bu komutu silmek istediginize emin misiniz?', { danger: true, confirmLabel: 'Sil' }))) return;
+        const res = await authFetch(`/api/provisioning-scripts/${id}`, { method: 'DELETE' });
+        if (res.ok) {
+            await loadProvisioningScripts();
+        } else {
+            provisioningAlert.textContent = 'Silme basarisiz';
+            provisioningAlert.classList.remove('d-none');
+        }
+    }
+
+    document.getElementById('provisioningForm').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        provisioningAlert.classList.add('d-none');
+        const payload = {
+            description: document.getElementById('provDescription').value,
+            commandLine: document.getElementById('provCommandLine').value,
+        };
+        try {
+            const res = await authFetch('/api/provisioning-scripts', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload),
+            });
+            if (!res.ok) {
+                const data = await res.json().catch(() => ({}));
+                provisioningAlert.textContent = data.error || 'Ekleme basarisiz';
+                provisioningAlert.classList.remove('d-none');
+                return;
+            }
+            document.getElementById('provisioningForm').reset();
+            await loadProvisioningScripts();
+        } catch (err) {
+            provisioningAlert.textContent = 'Sunucuya baglanilamadi';
+            provisioningAlert.classList.remove('d-none');
+        }
+    });
+
+    loadProvisioningScripts();
+</script>
+</body>
+</html>
