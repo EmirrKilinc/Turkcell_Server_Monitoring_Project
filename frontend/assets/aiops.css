@@ -1,0 +1,274 @@
+/* AI Takip & Analiz - page-specific styles layered on top of the shared
+   app.css design system (light "steel blueprint" theme, Bootstrap 5.3.3).
+   Everything here uses the same CSS custom properties as the rest of the
+   app so this page looks like part of the same product, not a standalone
+   design. */
+
+/* ---------- Izlenecek Metrik Gruplari (per-server checkbox rows) ---------- */
+
+.aiops-group-server {
+    margin-bottom: 1rem;
+}
+
+.aiops-group-server:last-child {
+    margin-bottom: 0;
+}
+
+.aiops-group-server-name {
+    font-family: var(--font-heading);
+    font-size: 0.78rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--brand-blue-dark);
+    margin-bottom: 0.4rem;
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+}
+
+.aiops-group-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+    padding: 0.45rem 0.6rem;
+    border-radius: var(--radius-sm);
+}
+
+.aiops-group-row:hover {
+    background: var(--surface-hover);
+}
+
+.aiops-group-row .form-check-label {
+    font-size: 0.87rem;
+    color: var(--text);
+}
+
+.aiops-group-row .form-check-input {
+    margin-left: 0;
+    flex-shrink: 0;
+}
+
+/* ---------- Scrollable lists (metric grubu listesi, anomali kartlari) -----
+   Ikisi de sinirsiz uzayabilecek listeler - sabit bir yukseklikte tutup
+   tasan kismi kaydirilabilir yapiyoruz, sayfa sonsuza dogru uzamasin. */
+
+.aiops-scroll-list {
+    max-height: 360px;
+    overflow-y: auto;
+    padding-right: 0.35rem;
+}
+
+/* ---------- Anomaly cards ---------- */
+
+.anomaly-card {
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    padding: 0.75rem 0.9rem;
+    margin-bottom: 0.65rem;
+    background: var(--surface-alt);
+}
+
+.anomaly-card:last-child {
+    margin-bottom: 0;
+}
+
+.anomaly-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 0.5rem;
+    margin-bottom: 0.35rem;
+}
+
+.anomaly-title {
+    font-weight: 600;
+    font-size: 0.88rem;
+    color: var(--text);
+}
+
+.anomaly-body {
+    font-size: 0.83rem;
+    line-height: 1.5;
+    color: var(--text-muted);
+    margin: 0;
+}
+
+.anomaly-time {
+    font-size: 0.72rem;
+    color: var(--text-muted);
+    margin-top: 0.35rem;
+}
+
+/* ---------- Chat panel ---------- */
+
+.aiops-chat-card {
+    height: 100%;
+}
+
+.aiops-chat-icon {
+    width: 38px;
+    height: 38px;
+    border-radius: 50%;
+    background: var(--brand-blue-light);
+    color: var(--brand-blue);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.1rem;
+    flex-shrink: 0;
+}
+
+.quick-prompts {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.4rem;
+}
+
+.chat-messages {
+    height: 420px;
+    overflow-y: auto;
+    padding: 0.5rem 0.25rem;
+    background: var(--surface-alt);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+}
+
+.chat-msg-row {
+    display: flex;
+    gap: 0.6rem;
+    padding: 0.5rem;
+    align-items: flex-start;
+}
+
+.chat-msg-row.user {
+    flex-direction: row-reverse;
+}
+
+.chat-avatar {
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.85rem;
+    flex-shrink: 0;
+    color: #fff;
+}
+
+.chat-avatar.assistant { background: var(--brand-blue); }
+.chat-avatar.user { background: var(--success); }
+
+.chat-bubble {
+    max-width: 78%;
+    padding: 0.55rem 0.8rem;
+    border-radius: var(--radius-md);
+    font-size: 0.87rem;
+    line-height: 1.5;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    color: var(--text);
+}
+
+.chat-bubble.user {
+    background: var(--brand-blue-light);
+    border-color: var(--brand-blue-tint);
+}
+
+.chat-bubble p {
+    margin: 0 0 0.4rem 0;
+    color: var(--text);
+}
+
+.chat-bubble p:last-of-type {
+    margin-bottom: 0;
+}
+
+.chat-bubble pre {
+    background: var(--surface-alt);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    padding: 0.5rem 0.65rem;
+    font-size: 0.78rem;
+    overflow-x: auto;
+    margin: 0.4rem 0;
+}
+
+.chat-bubble pre.error-block {
+    background: var(--danger-tint);
+    border-color: rgba(194, 59, 59, .25);
+    color: #93302f;
+}
+
+.chat-bubble code {
+    background: var(--surface-alt);
+    border-radius: 3px;
+    padding: 0.1em 0.35em;
+    font-size: 0.85em;
+}
+
+.warn-line {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.4rem;
+    background: var(--warning-tint);
+    border: 1px solid rgba(184, 121, 26, .25);
+    border-radius: var(--radius-sm);
+    padding: 0.4rem 0.55rem;
+    margin: 0.4rem 0;
+    color: var(--warning);
+    font-size: 0.82rem;
+}
+
+.chat-msg-time {
+    font-size: 0.68rem;
+    color: var(--text-muted);
+    margin-top: 0.3rem;
+}
+
+.typing-indicator {
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+    padding: 0.6rem 0.8rem;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+}
+
+.typing-indicator span {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--text-muted);
+    animation: aiops-typing 1.1s infinite ease-in-out;
+}
+
+.typing-indicator span:nth-child(2) { animation-delay: 0.15s; }
+.typing-indicator span:nth-child(3) { animation-delay: 0.3s; }
+
+@keyframes aiops-typing {
+    0%, 60%, 100% { opacity: 0.3; transform: translateY(0); }
+    30% { opacity: 1; transform: translateY(-2px); }
+}
+
+.chat-textarea {
+    resize: none;
+    max-height: 128px;
+}
+
+.chat-send-btn {
+    flex-shrink: 0;
+}
+
+.spin {
+    animation: aiops-spin 0.9s linear infinite;
+    display: inline-block;
+}
+
+@keyframes aiops-spin {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+}

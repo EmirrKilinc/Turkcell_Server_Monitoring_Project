@@ -1,0 +1,1137 @@
+/* Shared light "steel blueprint" design system for the monitoring app,
+   inspired by the Industry design system (frontend_example/). Loaded on
+   every page alongside Bootstrap 5.3.3 - this file only overrides/extends
+   Bootstrap. Class names are kept stable across the whole app so
+   page-level JS never needs to change when this file is restyled.
+   Deliberately skips the "+" corner registration marks the source design
+   system uses on cards - square, hairline-bordered surfaces only, no
+   corner decoration. */
+
+@import url('https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600;700&family=Barlow+Condensed:wght@500;600;700&display=swap');
+
+:root {
+    --bg: #eef1f5;
+    --surface: #ffffff;
+    --surface-alt: #f4f6f9;
+    --surface-hover: #e9eef4;
+    --border: #dbe1e8;
+    --border-strong: #c2ccd8;
+    --text: #1b2430;
+    --text-muted: #66717f;
+
+    --brand-blue: #3f7cae;
+    --brand-blue-dark: #2c5a80;
+    --brand-blue-light: #eaf2fa;
+    --brand-blue-tint: #dceaf6;
+
+    --success: #1a8f5e;
+    --success-tint: #e3f5ec;
+    --warning: #b8791a;
+    --warning-tint: #fbf0dd;
+    --danger: #c23b3b;
+    --danger-tint: #fbe7e7;
+
+    --font-heading: "Barlow Condensed", system-ui, sans-serif;
+    --font-body: "Barlow", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+
+    --radius-sm: 3px;
+    --radius-md: 5px;
+    --radius-lg: 8px;
+
+    --shadow-sm: 0 1px 2px rgba(27, 36, 48, .06);
+    --shadow-md: 0 4px 14px rgba(27, 36, 48, .08);
+    --shadow-lg: 0 16px 36px rgba(27, 36, 48, .14);
+}
+
+body {
+    background-color: var(--bg);
+    color: var(--text);
+    font-family: var(--font-body);
+    min-height: 100vh;
+    font-size: 15px;
+}
+
+h1, h2, h3, h4, h5, h6 {
+    font-family: var(--font-heading);
+    font-weight: 600;
+    letter-spacing: -0.01em;
+    color: var(--text);
+}
+
+/* Bootstrap's Reboot forces `-webkit-appearance: button` on every bare
+   <button> (its own .btn class resets this back to none) - custom buttons
+   in this file that don't use .btn (custom-select, notif panel, etc.) need
+   the same reset or Windows Chrome paints them with native OS button chrome
+   instead of these styles, which looks like a flat gray box. */
+button {
+    appearance: none;
+    -webkit-appearance: none;
+    -moz-appearance: none;
+}
+
+a {
+    color: var(--brand-blue);
+    text-decoration: none;
+}
+
+a:hover {
+    color: var(--brand-blue-dark);
+}
+
+p, .form-text, small {
+    color: var(--text-muted);
+}
+
+code, pre, .font-monospace {
+    color: var(--brand-blue-dark);
+}
+
+hr {
+    border-color: var(--border);
+    opacity: 1;
+}
+
+:focus-visible {
+    outline: 2px solid var(--brand-blue);
+    outline-offset: 1px;
+}
+
+::selection {
+    background: var(--brand-blue-tint);
+}
+
+/* ---------- App shell: topbar + sidebar ---------- */
+
+.app-topbar {
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    padding: 0.85rem 1.5rem;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    flex-wrap: wrap;
+    position: sticky;
+    top: 0;
+    z-index: 1030;
+}
+
+.app-brand {
+    font-family: var(--font-heading);
+    font-weight: 600;
+    font-size: 1.2rem;
+    letter-spacing: 0.01em;
+    color: var(--text);
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+}
+
+.app-brand i {
+    color: var(--brand-blue);
+    font-size: 1.4rem;
+}
+
+.app-topbar-right {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+}
+
+.app-clock {
+    color: var(--text-muted);
+    font-size: 0.85rem;
+    font-variant-numeric: tabular-nums;
+    padding-left: 1rem;
+    border-left: 1px solid var(--border);
+}
+
+.twofa-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    font-family: var(--font-heading);
+    font-size: 0.72rem;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    padding: 0.35em 0.75em;
+    border-radius: var(--radius-sm);
+    border: 1px solid transparent;
+}
+
+.twofa-pill.on {
+    color: var(--success);
+    background: var(--success-tint);
+    border-color: rgba(26, 143, 94, .25);
+}
+
+.twofa-pill.off {
+    color: var(--text-muted);
+    background: var(--surface-alt);
+    border-color: var(--border);
+}
+
+.app-body {
+    display: flex;
+    align-items: flex-start;
+    min-height: calc(100vh - 64px);
+}
+
+.app-sidebar {
+    width: 232px;
+    flex: 0 0 232px;
+    background: var(--surface);
+    border-right: 1px solid var(--border);
+    min-height: calc(100vh - 64px);
+    padding: 1.25rem 0.75rem;
+    position: sticky;
+    top: 64px;
+}
+
+.app-sidebar-link {
+    display: flex;
+    align-items: center;
+    gap: 0.7rem;
+    padding: 0.6rem 0.85rem;
+    border-radius: var(--radius-sm);
+    border-left: 2px solid transparent;
+    color: var(--text-muted);
+    font-weight: 500;
+    font-size: 0.92rem;
+    margin-bottom: 0.2rem;
+    transition: background-color .15s ease, color .15s ease, border-color .15s ease;
+}
+
+.app-sidebar-link i {
+    font-size: 1.05rem;
+    width: 1.2rem;
+    text-align: center;
+    color: var(--text-muted);
+}
+
+.app-sidebar-link:hover {
+    background: var(--surface-hover);
+    color: var(--text);
+}
+
+.app-sidebar-link.active {
+    background: var(--brand-blue-light);
+    border-left-color: var(--brand-blue);
+    color: var(--brand-blue-dark);
+    font-weight: 600;
+}
+
+.app-sidebar-link.active i {
+    color: var(--brand-blue);
+}
+
+.app-main {
+    flex: 1 1 auto;
+    min-width: 0;
+    padding: 1.75rem;
+}
+
+/* ---------- Avatar + dropdown ---------- */
+
+.app-avatar-btn {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    background: transparent;
+    border: none;
+    padding: 0.25rem 0.4rem;
+    border-radius: var(--radius-sm);
+    color: var(--text);
+}
+
+.app-avatar-btn:hover {
+    background: var(--surface-hover);
+}
+
+.app-avatar-circle {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    background: var(--brand-blue);
+    color: #fff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: var(--font-heading);
+    font-weight: 600;
+    font-size: 0.9rem;
+    flex-shrink: 0;
+}
+
+.app-avatar-meta {
+    text-align: left;
+    line-height: 1.15;
+}
+
+.app-avatar-name {
+    font-size: 0.85rem;
+    font-weight: 600;
+}
+
+.app-avatar-role {
+    font-size: 0.72rem;
+    color: var(--text-muted);
+}
+
+.app-dropdown-menu {
+    position: absolute;
+    right: 0;
+    top: calc(100% + 6px);
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    box-shadow: var(--shadow-md);
+    min-width: 180px;
+    padding: 0.4rem;
+    z-index: 1050;
+}
+
+.app-dropdown-item {
+    display: block;
+    width: 100%;
+    text-align: left;
+    background: none;
+    border: none;
+    color: var(--text);
+    padding: 0.5rem 0.7rem;
+    border-radius: var(--radius-sm);
+    font-size: 0.85rem;
+}
+
+.app-dropdown-item:hover {
+    background: var(--surface-hover);
+    color: var(--brand-blue-dark);
+}
+
+/* ---------- Notification bell ---------- */
+
+.notif-bell-btn {
+    position: relative;
+    border: none;
+    background: transparent;
+    color: var(--text-muted);
+    font-size: 1.15rem;
+    padding: 0.3rem 0.5rem;
+    border-radius: var(--radius-sm);
+}
+
+.notif-bell-btn:hover {
+    background: var(--surface-hover);
+    color: var(--brand-blue);
+}
+
+.notif-bell-badge {
+    position: absolute;
+    top: -2px;
+    right: -2px;
+    font-size: 0.62rem;
+    padding: 0.15em 0.4em;
+}
+
+.notif-panel {
+    width: 360px;
+    max-height: 420px;
+    overflow-y: auto;
+    padding: 0;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    box-shadow: var(--shadow-md);
+    border-radius: var(--radius-md);
+}
+
+.notif-item {
+    padding: 0.7rem 1rem;
+    border-bottom: 1px solid var(--border);
+    display: block;
+    white-space: normal;
+    color: var(--text);
+}
+
+.notif-item:last-child {
+    border-bottom: none;
+}
+
+.notif-item.unread {
+    background: var(--brand-blue-light);
+}
+
+.notif-item-title {
+    font-weight: 600;
+    font-size: 0.85rem;
+    margin-bottom: 0.15rem;
+    color: var(--text);
+}
+
+.notif-item-message {
+    font-size: 0.8rem;
+    color: var(--text-muted);
+}
+
+.notif-item-time {
+    font-size: 0.72rem;
+    color: var(--text-muted);
+    margin-top: 0.2rem;
+}
+
+.notif-empty {
+    padding: 1.5rem 1rem;
+    text-align: center;
+    color: var(--text-muted);
+    font-size: 0.85rem;
+}
+
+.notif-panel-header {
+    position: sticky;
+    top: 0;
+    z-index: 1;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.5rem;
+    padding: 0.6rem 1rem;
+    border-bottom: 1px solid var(--border);
+    background: var(--surface-alt);
+    border-radius: var(--radius-md) var(--radius-md) 0 0;
+}
+
+.notif-panel-title {
+    font-family: var(--font-heading);
+    font-weight: 600;
+    font-size: 0.85rem;
+    letter-spacing: 0.02em;
+    color: var(--text);
+}
+
+.notif-mark-all-btn {
+    border: none;
+    background: none;
+    color: var(--brand-blue);
+    font-size: 0.75rem;
+    font-weight: 600;
+    padding: 0.15rem 0.3rem;
+    cursor: pointer;
+}
+
+.notif-mark-all-btn:hover {
+    color: var(--brand-blue-dark);
+    text-decoration: underline;
+}
+
+.notif-mark-all-btn:disabled {
+    color: var(--text-muted);
+    cursor: default;
+    text-decoration: none;
+}
+
+/* ---------- Toast bildirimleri (native alert() yerine) ---------- */
+
+.app-toast-stack {
+    position: fixed;
+    top: 4.75rem;
+    right: 1.25rem;
+    z-index: 2000;
+    display: flex;
+    flex-direction: column;
+    gap: 0.6rem;
+    max-width: 360px;
+    width: calc(100% - 2.5rem);
+}
+
+.app-toast {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.6rem;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-left: 4px solid var(--brand-blue);
+    border-radius: var(--radius-md);
+    box-shadow: var(--shadow-md);
+    padding: 0.7rem 0.85rem;
+    font-size: 0.83rem;
+    color: var(--text);
+    animation: app-toast-in 0.2s ease;
+}
+
+.app-toast.hide {
+    animation: app-toast-out 0.18s ease forwards;
+}
+
+.app-toast.success { border-left-color: var(--success); }
+.app-toast.danger { border-left-color: var(--danger); }
+.app-toast.warning { border-left-color: var(--warning); }
+
+.app-toast-icon {
+    flex-shrink: 0;
+    font-size: 1rem;
+    line-height: 1.3;
+}
+
+.app-toast-message {
+    flex: 1;
+    line-height: 1.45;
+}
+
+.app-toast-close {
+    flex-shrink: 0;
+    border: none;
+    background: none;
+    color: var(--text-muted);
+    font-size: 0.95rem;
+    line-height: 1;
+    padding: 0;
+    cursor: pointer;
+}
+
+.app-toast-close:hover {
+    color: var(--text);
+}
+
+@keyframes app-toast-in {
+    from { opacity: 0; transform: translateX(18px); }
+    to { opacity: 1; transform: translateX(0); }
+}
+
+@keyframes app-toast-out {
+    from { opacity: 1; transform: translateX(0); }
+    to { opacity: 0; transform: translateX(18px); }
+}
+
+/* ---------- Onay dialoglari (native confirm() yerine) ---------- */
+
+.app-confirm-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 2100;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(27, 36, 48, .45);
+    padding: 1rem;
+    animation: app-confirm-fade-in 0.15s ease;
+}
+
+.app-confirm-overlay.hide {
+    animation: app-confirm-fade-out 0.15s ease forwards;
+}
+
+.app-confirm-modal {
+    width: 100%;
+    max-width: 380px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-lg);
+    padding: 1.1rem 1.2rem;
+    animation: app-confirm-scale-in 0.15s ease;
+}
+
+.app-confirm-title {
+    font-family: var(--font-heading);
+    font-weight: 600;
+    font-size: 1.05rem;
+    color: var(--text);
+    margin-bottom: 0.4rem;
+}
+
+.app-confirm-message {
+    font-size: 0.87rem;
+    color: var(--text-muted);
+    line-height: 1.5;
+    margin-bottom: 1.1rem;
+}
+
+.app-confirm-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 0.55rem;
+}
+
+.app-confirm-btn {
+    border-radius: var(--radius-sm);
+    border: 1px solid var(--border);
+    background: var(--surface);
+    color: var(--text);
+    font-size: 0.83rem;
+    font-weight: 600;
+    padding: 0.4rem 0.9rem;
+    cursor: pointer;
+}
+
+.app-confirm-btn.cancel:hover {
+    background: var(--surface-hover);
+}
+
+.app-confirm-btn.primary {
+    border-color: var(--brand-blue);
+    background: var(--brand-blue);
+    color: #fff;
+}
+
+.app-confirm-btn.primary:hover {
+    background: var(--brand-blue-dark);
+    border-color: var(--brand-blue-dark);
+}
+
+.app-confirm-btn.danger {
+    border-color: var(--danger);
+    background: var(--danger);
+    color: #fff;
+}
+
+.app-confirm-btn.danger:hover {
+    background: #a52f2f;
+    border-color: #a52f2f;
+}
+
+@keyframes app-confirm-fade-in {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+@keyframes app-confirm-fade-out {
+    from { opacity: 1; }
+    to { opacity: 0; }
+}
+
+@keyframes app-confirm-scale-in {
+    from { opacity: 0; transform: scale(0.96); }
+    to { opacity: 1; transform: scale(1); }
+}
+
+/* ---------- Custom select (native <select>'in acilir OS penceresi yerine) ---------- */
+
+.custom-select {
+    position: relative;
+}
+
+.custom-select-btn {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.5rem;
+    width: 100%;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    padding: 0.32rem 0.6rem;
+    font-size: 0.83rem;
+    color: var(--text);
+    cursor: pointer;
+    text-align: left;
+}
+
+.custom-select-btn:hover {
+    border-color: var(--border-strong);
+}
+
+.custom-select.open .custom-select-btn {
+    border-color: var(--brand-blue);
+    box-shadow: 0 0 0 3px var(--brand-blue-tint);
+}
+
+.custom-select-btn-label {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.custom-select-btn-label.is-placeholder {
+    color: var(--text-muted);
+}
+
+.custom-select-btn-caret {
+    flex-shrink: 0;
+    font-size: 0.7rem;
+    color: var(--text-muted);
+    transition: transform 0.15s ease;
+}
+
+.custom-select.open .custom-select-btn-caret {
+    transform: rotate(180deg);
+}
+
+.custom-select-panel {
+    position: absolute;
+    top: calc(100% + 4px);
+    left: 0;
+    min-width: 100%;
+    max-height: 260px;
+    overflow-y: auto;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    box-shadow: var(--shadow-md);
+    z-index: 1050;
+    padding: 0.3rem;
+}
+
+.custom-select-option {
+    padding: 0.4rem 0.6rem;
+    font-size: 0.83rem;
+    color: var(--text);
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.custom-select-option:hover {
+    background: var(--surface-hover);
+}
+
+.custom-select-option.selected {
+    background: var(--brand-blue-light);
+    color: var(--brand-blue-dark);
+    font-weight: 600;
+}
+
+.custom-select-option.disabled {
+    color: var(--text-muted);
+    cursor: default;
+    pointer-events: none;
+}
+
+/* ---------- Cards ---------- */
+
+.card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    box-shadow: var(--shadow-sm);
+    color: var(--text);
+}
+
+.card-body h1, .card-body h2, .card-body h3 {
+    color: var(--text);
+}
+
+.section-title {
+    font-family: var(--font-heading);
+    font-size: 1.05rem;
+    font-weight: 600;
+    color: var(--text);
+}
+
+.section-title i {
+    color: var(--brand-blue);
+}
+
+.metric-card {
+    height: 100%;
+}
+
+.metrics-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 1.5rem;
+}
+
+.metric-value {
+    font-family: var(--font-heading);
+    font-size: 2.3rem;
+    font-weight: 600;
+    color: var(--text);
+}
+
+.metric-label {
+    font-size: 0.78rem;
+    color: var(--brand-blue-dark);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    font-weight: 700;
+}
+
+.text-muted {
+    color: var(--text-muted) !important;
+}
+
+/* ---------- Buttons ---------- */
+
+.btn {
+    border-radius: var(--radius-sm);
+    font-weight: 500;
+}
+
+.btn-primary {
+    background-color: var(--brand-blue);
+    border-color: var(--brand-blue);
+}
+
+.btn-primary:hover, .btn-primary:focus {
+    background-color: var(--brand-blue-dark);
+    border-color: var(--brand-blue-dark);
+}
+
+.btn-outline-primary {
+    color: var(--brand-blue);
+    border-color: var(--brand-blue);
+}
+
+.btn-outline-primary:hover {
+    background-color: var(--brand-blue);
+    border-color: var(--brand-blue);
+    color: #fff;
+}
+
+.btn-outline-secondary {
+    color: var(--text-muted);
+    border-color: var(--border-strong);
+}
+
+.btn-outline-secondary:hover {
+    background-color: var(--surface-hover);
+    border-color: var(--border-strong);
+    color: var(--text);
+}
+
+.btn-link {
+    color: var(--brand-blue);
+}
+
+.btn-close {
+    filter: none;
+}
+
+.text-primary {
+    color: var(--brand-blue) !important;
+}
+
+.bg-primary {
+    background-color: var(--brand-blue) !important;
+}
+
+.btn-success {
+    background-color: var(--success);
+    border-color: var(--success);
+}
+
+.btn-success:hover, .btn-success:focus {
+    background-color: #147148;
+    border-color: #147148;
+}
+
+.btn-outline-success {
+    color: var(--success);
+    border-color: var(--success);
+}
+
+.btn-outline-success:hover {
+    background-color: var(--success);
+    border-color: var(--success);
+    color: #fff;
+}
+
+.btn-danger {
+    background-color: var(--danger);
+    border-color: var(--danger);
+}
+
+.btn-danger:hover, .btn-danger:focus {
+    background-color: #9c2f2f;
+    border-color: #9c2f2f;
+}
+
+.btn-outline-danger {
+    color: var(--danger);
+    border-color: var(--danger);
+}
+
+.btn-outline-danger:hover {
+    background-color: var(--danger);
+    border-color: var(--danger);
+    color: #fff;
+}
+
+.btn-outline-warning {
+    color: var(--warning);
+    border-color: var(--warning);
+}
+
+.btn-outline-warning:hover {
+    background-color: var(--warning);
+    border-color: var(--warning);
+    color: #fff;
+}
+
+.progress {
+    background-color: var(--surface-alt);
+}
+
+.progress-bar.bg-primary {
+    background-color: var(--brand-blue) !important;
+}
+
+.progress-bar.bg-success {
+    background-color: var(--success) !important;
+}
+
+.progress-bar.bg-warning {
+    background-color: var(--warning) !important;
+}
+
+.progress-bar.bg-danger {
+    background-color: var(--danger) !important;
+}
+
+/* ---------- Forms ---------- */
+
+.form-control, .form-select {
+    background-color: var(--surface);
+    border: 1px solid var(--border-strong);
+    color: var(--text);
+    border-radius: var(--radius-sm);
+}
+
+.form-control:focus, .form-select:focus {
+    background-color: var(--surface);
+    border-color: var(--brand-blue);
+    color: var(--text);
+    box-shadow: 0 0 0 0.2rem var(--brand-blue-tint);
+}
+
+.form-control::placeholder {
+    color: var(--text-muted);
+    opacity: .7;
+}
+
+.form-label {
+    color: var(--text);
+    font-weight: 500;
+    font-size: 0.88rem;
+}
+
+.form-check-input {
+    background-color: var(--surface);
+    border-color: var(--border-strong);
+}
+
+.form-check-input:checked {
+    background-color: var(--brand-blue);
+    border-color: var(--brand-blue);
+}
+
+/* ---------- Badges (translucent pills, GREEN/AMBER/RED/BLUE semantics) ---------- */
+
+.badge {
+    font-weight: 700;
+    letter-spacing: 0.02em;
+    border-radius: 999px;
+    padding: 0.4em 0.8em;
+    font-size: 0.7rem;
+    border: 1px solid transparent;
+}
+
+.badge.bg-success, .badge-approval-APPROVED, .badge-cfg-IN_SYNC, .badge-success-true {
+    background: var(--success-tint) !important;
+    color: var(--success) !important;
+    border-color: rgba(26, 143, 94, .25);
+}
+
+.badge.bg-warning, .badge-approval-PENDING_APPROVAL, .badge-cfg-DRIFT_DETECTED {
+    background: var(--warning-tint) !important;
+    color: var(--warning) !important;
+    border-color: rgba(184, 121, 26, .25);
+}
+
+.badge.bg-danger, .badge-approval-REJECTED, .badge-cfg-FILE_NOT_FOUND, .badge-cfg-PERMISSION_DENIED, .badge-success-false, .badge-status-TIMED_OUT {
+    background: var(--danger-tint) !important;
+    color: var(--danger) !important;
+    border-color: rgba(194, 59, 59, .25);
+}
+
+.badge.bg-secondary, .badge-cfg-PENDING {
+    background: var(--surface-alt) !important;
+    color: var(--text-muted) !important;
+    border-color: var(--border);
+}
+
+.badge-mode-PERIODIC, .badge.bg-primary {
+    background: var(--brand-blue-tint) !important;
+    color: var(--brand-blue-dark) !important;
+    border-color: rgba(63, 124, 174, .3);
+}
+
+.badge-mode-ON_DEMAND {
+    background: #f1e9fb !important;
+    color: #7c4fc4 !important;
+    border-color: rgba(124, 79, 196, .25);
+}
+
+.badge-status-COMPLETED {
+    background: var(--success-tint) !important;
+    color: var(--success) !important;
+    border-color: rgba(26, 143, 94, .25);
+}
+
+.badge-status-PENDING {
+    background: var(--warning-tint) !important;
+    color: var(--warning) !important;
+    border-color: rgba(184, 121, 26, .25);
+}
+
+.badge.text-dark {
+    color: var(--text) !important;
+}
+
+/* ---------- Modals ---------- */
+
+.modal-content {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-lg);
+    color: var(--text);
+    overflow: hidden;
+}
+
+.modal-header {
+    border-bottom: 1px solid var(--border);
+    padding: 1.1rem 1.4rem;
+    background: var(--surface-alt);
+}
+
+.modal-header .modal-title {
+    font-weight: 600;
+    color: var(--text);
+}
+
+.modal-body {
+    padding: 1.4rem;
+}
+
+.modal-footer {
+    border-top: 1px solid var(--border);
+    padding: 1rem 1.4rem;
+}
+
+/* ---------- Tables ---------- */
+
+.table {
+    color: var(--text);
+    --bs-table-bg: transparent;
+    --bs-table-color: var(--text);
+    --bs-table-striped-bg: var(--surface-alt);
+    --bs-table-hover-bg: var(--surface-hover);
+    --bs-table-hover-color: var(--text);
+    --bs-table-border-color: var(--border);
+}
+
+.table thead th {
+    color: var(--brand-blue-dark);
+    font-family: var(--font-heading);
+    font-size: 0.76rem;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    font-weight: 600;
+    background: var(--surface-alt);
+    border-bottom: 1px solid var(--border);
+}
+
+.table td, .table th {
+    border-color: var(--border);
+    vertical-align: middle;
+}
+
+.table-success {
+    --bs-table-bg: var(--success-tint) !important;
+}
+
+.pagination .page-link {
+    background: var(--surface);
+    border-color: var(--border);
+    color: var(--text);
+}
+
+.pagination .page-item.disabled .page-link {
+    background: var(--surface-alt);
+    color: var(--text-muted);
+}
+
+.pagination .page-item.active .page-link {
+    background: var(--brand-blue);
+    border-color: var(--brand-blue);
+}
+
+/* ---------- Alerts ---------- */
+
+.alert-danger {
+    background: var(--danger-tint);
+    border-color: rgba(194, 59, 59, .25);
+    color: #93302f;
+}
+
+.alert-info {
+    background: var(--brand-blue-tint);
+    border-color: rgba(63, 124, 174, .3);
+    color: var(--brand-blue-dark);
+}
+
+.alert-success {
+    background: var(--success-tint);
+    border-color: rgba(26, 143, 94, .25);
+    color: #146b47;
+}
+
+/* ---------- Diff viewer (configs.html) ---------- */
+
+.diff-viewer {
+    background: var(--surface-alt);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+}
+
+.diff-CONTEXT { color: var(--text-muted); }
+.diff-ADD { background-color: var(--success-tint); color: #146b47; }
+.diff-DEL { background-color: var(--danger-tint); color: #93302f; }
+.diff-line .ln { color: var(--text-muted); }
+
+.version-pill {
+    border: 1px solid var(--border);
+    background: var(--surface);
+    color: var(--text);
+}
+
+.version-pill:hover {
+    background: var(--brand-blue-light);
+    border-color: var(--brand-blue);
+}
+
+/* ---------- OTP boxes (login.html) ---------- */
+
+.otp-digit {
+    width: 46px;
+    height: 56px;
+    text-align: center;
+    font-size: 1.4rem;
+    font-weight: 700;
+    font-family: var(--font-heading);
+}
+
+/* ---------- Auth pages ---------- */
+
+.auth-card {
+    max-width: 420px;
+    width: 100%;
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-lg);
+    background: var(--surface);
+}
+
+.auth-shell {
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--bg);
+    background-image:
+        linear-gradient(var(--border) 1px, transparent 1px),
+        linear-gradient(90deg, var(--border) 1px, transparent 1px);
+    background-size: 32px 32px;
+    background-position: center;
+}

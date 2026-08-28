@@ -1,0 +1,22 @@
+[Unit]
+Description=Sistem Izleme - Frontend statik sunucusu (Node.js, port 3000)
+After=network.target
+
+[Service]
+Type=simple
+WorkingDirectory=/data01/mcqueen/frontend
+ExecStart=/usr/bin/node /data01/mcqueen/frontend/server.js
+Environment=PORT=3000
+Restart=on-failure
+RestartSec=5
+User=mcqueen
+Group=mcqueen
+
+# Sertlestirme (opsiyonel ama tavsiye edilir) - sunucu sadece kendi
+# dizinindeki statik dosyalari okuyor, baska hicbir seye ihtiyaci yok.
+NoNewPrivileges=true
+ProtectSystem=full
+PrivateTmp=true
+
+[Install]
+WantedBy=multi-user.target

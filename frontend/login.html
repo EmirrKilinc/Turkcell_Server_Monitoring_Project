@@ -1,0 +1,259 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Giris - Sistem Izleme</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600;700&family=Barlow+Condensed:wght@500;600;700&display=swap" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
+    <link href="assets/app.css" rel="stylesheet">
+    <style>
+        #otpBoxes {
+            display: flex;
+            gap: 0.5rem;
+            justify-content: center;
+        }
+    </style>
+</head>
+<body>
+<div class="auth-shell w-100">
+<div class="card auth-card">
+    <div class="card-body p-4">
+        <h1 class="h4 mb-3"><i class="bi bi-hdd-network text-primary"></i> Sistem Izleme Paneli</h1>
+
+        <div id="alertBox" class="alert alert-danger d-none" role="alert"></div>
+        <div id="infoBox" class="alert alert-info d-none" role="alert"></div>
+
+        <div id="credentialsStep">
+            <p class="text-muted mb-4">Hesabinizla giris yapin</p>
+            <form id="loginForm">
+                <div class="mb-3">
+                    <label for="username" class="form-label">Kullanici Adi</label>
+                    <input type="text" class="form-control" id="username" required autofocus>
+                </div>
+                <div class="mb-3">
+                    <label for="password" class="form-label">Sifre</label>
+                    <input type="password" class="form-control" id="password" required>
+                </div>
+                <button type="submit" class="btn btn-primary w-100">Giris Yap</button>
+            </form>
+
+            <p class="text-center mt-3 mb-0">
+                Hesabiniz yok mu? <a href="register.html">Kayit olun</a>
+            </p>
+        </div>
+
+        <div id="otpStep" class="d-none">
+            <p class="text-muted mb-1">E-posta adresinize gonderilen 6 haneli dogrulama kodunu girin.</p>
+            <p class="text-muted small mb-4">Kod suresi: <span id="otpCountdown">05:00</span></p>
+            <form id="otpForm">
+                <div class="mb-3">
+                    <label class="form-label">Dogrulama Kodu</label>
+                    <div id="otpBoxes">
+                        <input type="text" class="form-control otp-digit" inputmode="numeric" maxlength="1" data-otp-index="0" autofocus>
+                        <input type="text" class="form-control otp-digit" inputmode="numeric" maxlength="1" data-otp-index="1">
+                        <input type="text" class="form-control otp-digit" inputmode="numeric" maxlength="1" data-otp-index="2">
+                        <input type="text" class="form-control otp-digit" inputmode="numeric" maxlength="1" data-otp-index="3">
+                        <input type="text" class="form-control otp-digit" inputmode="numeric" maxlength="1" data-otp-index="4">
+                        <input type="text" class="form-control otp-digit" inputmode="numeric" maxlength="1" data-otp-index="5">
+                    </div>
+                </div>
+                <button type="submit" class="btn btn-primary w-100 mb-2">Dogrula</button>
+                <button type="button" id="resendBtn" class="btn btn-link w-100">Kodu Yeniden Gonder</button>
+            </form>
+        </div>
+    </div>
+</div>
+</div>
+
+<script src="assets/auth.js"></script>
+<script>
+    if (isLoggedIn()) {
+        window.location.href = 'dashboard.html';
+    }
+
+    const alertBox = document.getElementById('alertBox');
+    const infoBox = document.getElementById('infoBox');
+    const credentialsStep = document.getElementById('credentialsStep');
+    const otpStep = document.getElementById('otpStep');
+    const loginForm = document.getElementById('loginForm');
+    const otpForm = document.getElementById('otpForm');
+    const resendBtn = document.getElementById('resendBtn');
+    const otpCountdownEl = document.getElementById('otpCountdown');
+    const otpDigits = Array.from(document.querySelectorAll('.otp-digit'));
+
+    let tempToken = null;
+    let countdownTimer = null;
+
+    function getOtpCode() {
+        return otpDigits.map(d => d.value).join('');
+    }
+
+    function clearOtpDigits() {
+        otpDigits.forEach(d => { d.value = ''; });
+    }
+
+    otpDigits.forEach((digit, idx) => {
+        digit.addEventListener('input', () => {
+            digit.value = digit.value.replace(/[^0-9]/g, '').slice(0, 1);
+            if (digit.value && idx < otpDigits.length - 1) {
+                otpDigits[idx + 1].focus();
+            }
+        });
+        digit.addEventListener('keydown', (e) => {
+            if (e.key === 'Backspace' && !digit.value && idx > 0) {
+                otpDigits[idx - 1].focus();
+            }
+        });
+        digit.addEventListener('paste', (e) => {
+            e.preventDefault();
+            const pasted = (e.clipboardData || window.clipboardData).getData('text').replace(/[^0-9]/g, '');
+            if (!pasted) return;
+            otpDigits.forEach((d, i) => { d.value = pasted[i] || ''; });
+            const nextEmpty = otpDigits.findIndex(d => !d.value);
+            (nextEmpty === -1 ? otpDigits[otpDigits.length - 1] : otpDigits[nextEmpty]).focus();
+        });
+    });
+
+    function showError(message) {
+        infoBox.classList.add('d-none');
+        alertBox.textContent = message;
+        alertBox.classList.remove('d-none');
+    }
+
+    function showInfo(message) {
+        alertBox.classList.add('d-none');
+        infoBox.textContent = message;
+        infoBox.classList.remove('d-none');
+    }
+
+    function clearMessages() {
+        alertBox.classList.add('d-none');
+        infoBox.classList.add('d-none');
+    }
+
+    function startCountdown(seconds) {
+        clearInterval(countdownTimer);
+        let remaining = seconds;
+        renderCountdown(remaining);
+        countdownTimer = setInterval(() => {
+            remaining -= 1;
+            renderCountdown(remaining);
+            if (remaining <= 0) {
+                clearInterval(countdownTimer);
+                otpCountdownEl.textContent = 'suresi doldu';
+            }
+        }, 1000);
+    }
+
+    function renderCountdown(remaining) {
+        const clamped = Math.max(remaining, 0);
+        const mm = String(Math.floor(clamped / 60)).padStart(2, '0');
+        const ss = String(clamped % 60).padStart(2, '0');
+        otpCountdownEl.textContent = `${mm}:${ss}`;
+    }
+
+    function showOtpStep(newTempToken) {
+        tempToken = newTempToken;
+        credentialsStep.classList.add('d-none');
+        otpStep.classList.remove('d-none');
+        clearOtpDigits();
+        otpDigits[0].focus();
+        startCountdown(5 * 60);
+    }
+
+    loginForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        clearMessages();
+
+        const username = document.getElementById('username').value;
+        const password = document.getElementById('password').value;
+
+        try {
+            const response = await fetch(apiUrl('/api/auth/login'), {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ username, password }),
+            });
+
+            const data = await response.json().catch(() => ({}));
+
+            if (!response.ok) {
+                showError(data.error || 'Giris basarisiz');
+                return;
+            }
+
+            if (data.requires2fa) {
+                showOtpStep(data.tempToken);
+                return;
+            }
+
+            saveToken(data.token);
+            window.location.href = 'dashboard.html';
+        } catch (err) {
+            showError('Sunucuya baglanilamadi');
+        }
+    });
+
+    otpForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        clearMessages();
+
+        const otpCode = getOtpCode();
+        if (otpCode.length !== 6) {
+            showError('6 haneli kodu eksiksiz girin');
+            return;
+        }
+
+        try {
+            const response = await fetch(apiUrl('/api/auth/verify-2fa'), {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ tempToken, otpCode }),
+            });
+
+            const data = await response.json().catch(() => ({}));
+
+            if (!response.ok) {
+                showError(data.error || 'Dogrulama basarisiz');
+                return;
+            }
+
+            clearInterval(countdownTimer);
+            saveToken(data.token);
+            window.location.href = 'dashboard.html';
+        } catch (err) {
+            showError('Sunucuya baglanilamadi');
+        }
+    });
+
+    resendBtn.addEventListener('click', async () => {
+        clearMessages();
+        try {
+            const response = await fetch(apiUrl('/api/auth/resend-2fa'), {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ tempToken }),
+            });
+
+            const data = await response.json().catch(() => ({}));
+
+            if (!response.ok) {
+                showError(data.error || 'Kod yeniden gonderilemedi');
+                return;
+            }
+
+            tempToken = data.tempToken;
+            clearOtpDigits();
+            otpDigits[0].focus();
+            startCountdown(5 * 60);
+            showInfo('Yeni kod e-posta adresinize gonderildi.');
+        } catch (err) {
+            showError('Sunucuya baglanilamadi');
+        }
+    });
+</script>
+</body>
+</html>

@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Versiyonlar & Fark - Sistem Izleme</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600;700&family=Barlow+Condensed:wght@500;600;700&display=swap" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
+    <link href="assets/app.css" rel="stylesheet">
+    <style>
+        .diff-viewer {
+            border-radius: 8px;
+            padding: 0.5rem 0;
+            font-family: 'Courier New', monospace;
+            font-size: 0.85rem;
+            max-height: 600px;
+            overflow: auto;
+        }
+        .diff-line { padding: 0 0.75rem; white-space: pre-wrap; word-break: break-all; }
+        .diff-line .ln { display: inline-block; width: 3.5rem; user-select: none; }
+        .version-strip { display: flex; gap: 0.4rem; overflow-x: auto; padding-bottom: 0.5rem; margin-bottom: 0.75rem; }
+        .version-pill {
+            flex: 0 0 auto;
+            border-radius: 999px;
+            padding: 0.3rem 0.75rem;
+            font-size: 0.78rem;
+            cursor: pointer;
+            white-space: nowrap;
+        }
+    </style>
+</head>
+<body>
+<div id="topbar-root"></div>
+<div class="app-body">
+<div id="sidebar-root"></div>
+<main class="app-main">
+<div class="container-fluid pb-5">
+    <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-4">
+        <h1 class="h4 mb-0" id="pageTitle">Versiyonlar & Fark</h1>
+        <a href="configs.html" class="btn btn-outline-secondary btn-sm"><i class="bi bi-arrow-left"></i> Yapilandirma Takibine Don</a>
+    </div>
+
+    <div class="card">
+        <div class="card-body">
+            <div id="historyAlert" class="alert alert-danger d-none"></div>
+            <div id="missingIdMessage" class="text-muted d-none">Gecersiz baglanti - takip edilen dosya bulunamadi.</div>
+            <div id="historyEmptyMessage" class="text-muted d-none">Henuz hicbir versiyon yakalanmadi (agent ilk kontrolu yapana kadar bekleniyor).</div>
+            <div id="historyContent" class="d-none">
+                <h2 class="section-title mb-3">Versiyon Gecmisi</h2>
+                <div id="versionStrip" class="version-strip"></div>
+                <div class="row g-2 mb-3 align-items-end">
+                    <div class="col-12 col-sm-5">
+                        <label class="form-label small">Versiyon 1</label>
+                        <select class="form-select form-select-sm" id="diffV1Select"></select>
+                    </div>
+                    <div class="col-12 col-sm-5">
+                        <label class="form-label small">Versiyon 2</label>
+                        <select class="form-select form-select-sm" id="diffV2Select"></select>
+                    </div>
+                    <div class="col-12 col-sm-2">
+                        <button id="showDiffBtn" class="btn btn-outline-primary btn-sm w-100">Farki Goster</button>
+                    </div>
+                </div>
+                <div id="diffSummaryLine" class="small text-muted mb-2"></div>
+                <div id="diffViewer" class="diff-viewer"></div>
+            </div>
+        </div>
+    </div>
+</div>
+</main>
+</div>
+
+<script src="assets/auth.js"></script>
+<script src="assets/nav.js"></script>
+<script>
+    requireAuth();
+    renderShell('configs');
+
+    function escapeHtml(value) {
+        if (value === null || value === undefined) return '';
+        return String(value)
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;');
+    }
+
+    const params = new URLSearchParams(window.location.search);
+    const trackedFileId = params.get('id');
+    const fileLabel = params.get('label');
+
+    if (fileLabel) {
+        document.getElementById('pageTitle').textContent = `Versiyonlar & Fark: ${fileLabel}`;
+    }
+
+    if (!trackedFileId) {
+        document.getElementById('missingIdMessage').classList.remove('d-none');
+    } else {
+        loadHistory();
+    }
+
+    async function loadHistory() {
+        const alertEl = document.getElementById('historyAlert');
+        alertEl.classList.add('d-none');
+
+        try {
+            const res = await authFetch(`/api/configs/tracked-files/${trackedFileId}/history`);
+            if (!res.ok) throw new Error('failed');
+            const history = await res.json(); // en yeniden en eskiye siralanmis gelir
+
+            if (history.length === 0) {
+                document.getElementById('historyEmptyMessage').classList.remove('d-none');
+                document.getElementById('historyContent').classList.add('d-none');
+                return;
+            }
+            document.getElementById('historyEmptyMessage').classList.add('d-none');
+            document.getElementById('historyContent').classList.remove('d-none');
+
+            const versions = history.map(h => h.versionNumber).sort((a, b) => a - b);
+            const v1Select = document.getElementById('diffV1Select');
+            const v2Select = document.getElementById('diffV2Select');
+            const label = (v) => v === 1 ? 'v1 (Baslangic)' : `v${v}`;
+            v1Select.innerHTML = versions.map(v => `<option value="${v}">${label(v)}</option>`).join('');
+            v2Select.innerHTML = versions.map(v => `<option value="${v}">${label(v)}</option>`).join('');
+
+            // Varsayilan: en son iki versiyonu karsilastir (tek versiyon varsa kendisiyle).
+            v1Select.value = versions.length > 1 ? versions[versions.length - 2] : versions[0];
+            v2Select.value = versions[versions.length - 1];
+
+            renderVersionStrip(history, versions);
+
+            await showDiff();
+        } catch (err) {
+            document.getElementById('historyAlert').textContent = 'Versiyon gecmisi yuklenemedi';
+            document.getElementById('historyAlert').classList.remove('d-none');
+        }
+    }
+
+    function renderVersionStrip(history, versions) {
+        const strip = document.getElementById('versionStrip');
+        strip.innerHTML = '';
+        // history en yeniden en eskiye siralanmis gelir - stripte de ayni sirada goster.
+        history.forEach(h => {
+            const pill = document.createElement('button');
+            pill.type = 'button';
+            pill.className = 'version-pill';
+            const label = h.versionNumber === 1 ? 'v1 (Baslangic)' : `v${h.versionNumber}`;
+            pill.innerHTML = `<strong>${label}</strong> &middot; ${new Date(h.capturedAt).toLocaleString('tr-TR')} &middot; ${escapeHtml(h.diffSummary || '')}`;
+            pill.addEventListener('click', () => {
+                const idx = versions.indexOf(h.versionNumber);
+                const previous = idx > 0 ? versions[idx - 1] : h.versionNumber;
+                document.getElementById('diffV1Select').value = previous;
+                document.getElementById('diffV2Select').value = h.versionNumber;
+                showDiff();
+            });
+            strip.appendChild(pill);
+        });
+    }
+
+    async function showDiff() {
+        const v1 = document.getElementById('diffV1Select').value;
+        const v2 = document.getElementById('diffV2Select').value;
+        if (!v1 || !v2) return;
+
+        const alertEl = document.getElementById('historyAlert');
+        alertEl.classList.add('d-none');
+        try {
+            const res = await authFetch(`/api/configs/tracked-files/${trackedFileId}/diff?v1=${v1}&v2=${v2}`);
+            if (!res.ok) throw new Error('failed');
+            const diff = await res.json();
+
+            const added = diff.lines.filter(l => l.type === 'ADD').length;
+            const removed = diff.lines.filter(l => l.type === 'DEL').length;
+            document.getElementById('diffSummaryLine').textContent =
+                `v${diff.v1} -> v${diff.v2}: +${added} / -${removed} satir`;
+
+            const viewer = document.getElementById('diffViewer');
+            viewer.innerHTML = '';
+            diff.lines.forEach(line => {
+                const div = document.createElement('div');
+                div.className = `diff-line diff-${line.type}`;
+                const prefix = line.type === 'ADD' ? '+' : (line.type === 'DEL' ? '-' : ' ');
+                const lineNo = line.type === 'DEL' ? line.oldLineNumber : line.newLineNumber;
+                div.innerHTML = `<span class="ln">${lineNo != null ? lineNo : ''}</span>${prefix} ${escapeHtml(line.text)}`;
+                viewer.appendChild(div);
+            });
+        } catch (err) {
+            alertEl.textContent = 'Fark yuklenemedi';
+            alertEl.classList.remove('d-none');
+        }
+    }
+
+    document.getElementById('showDiffBtn').addEventListener('click', showDiff);
+</script>
+</body>
+</html>

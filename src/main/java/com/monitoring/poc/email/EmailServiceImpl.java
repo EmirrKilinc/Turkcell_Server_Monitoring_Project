@@ -24,7 +24,7 @@ public class EmailServiceImpl implements EmailService {
     private final boolean mailEnabled;
 
     public EmailServiceImpl(JavaMailSender mailSender,
-                            @Value("${app.mail.from:monitoring-noreply@turkcell.com.tr}") String fromAddress,
+                            @Value("${app.mail.from:monitoring-noreply@example.com}") String fromAddress,
                             @Value("${app.mail.enabled:true}") boolean mailEnabled) {
         this.mailSender = mailSender;
         this.fromAddress = fromAddress;

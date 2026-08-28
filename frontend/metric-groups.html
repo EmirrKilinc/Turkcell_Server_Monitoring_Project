@@ -1,0 +1,876 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Metrik Gruplari - Sistem Izleme</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600;700&family=Barlow+Condensed:wght@500;600;700&display=swap" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
+    <link href="assets/app.css" rel="stylesheet">
+    <style>
+        pre.payload-preview {
+            background: var(--bg);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 0.5rem 0.75rem;
+            font-size: 0.8rem;
+            max-height: 120px;
+            overflow: auto;
+            margin: 0;
+            color: var(--text);
+            white-space: pre-wrap;
+            word-break: break-word;
+        }
+        tbody tr { transition: background-color 1.5s ease; }
+        .pagination-bar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+            margin-top: 0.75rem;
+        }
+    </style>
+</head>
+<body>
+<div id="topbar-root"></div>
+<div class="app-body">
+<div id="sidebar-root"></div>
+<main class="app-main">
+<div class="container-fluid pb-5">
+    <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-4">
+        <h1 class="h4 mb-0">Metrik Gruplari</h1>
+        <a href="metrics.html" class="btn btn-outline-secondary btn-sm"><i class="bi bi-arrow-left"></i> Metrik Katalogu</a>
+    </div>
+
+    <!-- Metrik Grupları -->
+    <div class="card mb-4">
+        <div class="card-body">
+            <div class="d-flex justify-content-between align-items-center flex-wrap gap-3 mb-3">
+                <h2 class="section-title mb-0">Metrik Gruplari</h2>
+                <div class="d-flex align-items-end gap-2">
+                    <div>
+                        <label class="form-label fw-semibold mb-1">Sunucu</label>
+                        <div id="groupServerSelect" style="min-width: 220px;"></div>
+                    </div>
+                    <button id="addGroupBtn" class="btn btn-primary btn-sm d-none" data-bs-toggle="modal" data-bs-target="#groupModal">
+                        + Grup Ekle
+                    </button>
+                </div>
+            </div>
+            <div id="groupsAlert" class="alert alert-danger d-none"></div>
+            <div class="table-responsive">
+                <table class="table align-middle">
+                    <thead>
+                        <tr>
+                            <th>Ad</th>
+                            <th>Varsayilan Mod</th>
+                            <th>Aralik (sn)</th>
+                            <th class="text-end">Islem</th>
+                        </tr>
+                    </thead>
+                    <tbody id="groupsTableBody">
+                        <tr><td colspan="4" class="text-muted">Once bir sunucu secin</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Seçili Grup Detayı -->
+    <div class="card d-none" id="groupDetailCard">
+        <div class="card-body">
+            <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-3">
+                <h2 class="section-title mb-0" id="groupDetailTitle">Grup Detayi</h2>
+                <div class="d-flex gap-2">
+                    <button id="addItemBtn" class="btn btn-outline-primary btn-sm d-none" data-bs-toggle="modal" data-bs-target="#itemModal">
+                        + Metrik Ekle
+                    </button>
+                    <button id="liveStreamToggleBtn" class="btn btn-outline-success btn-sm">🟢 Canli Akis Ac</button>
+                    <button id="fetchNowBtn" class="btn btn-success btn-sm">Simdi Getir</button>
+                </div>
+            </div>
+            <div id="fetchNowAlert" class="alert alert-info d-none"></div>
+            <div id="itemsAlert" class="alert alert-danger d-none"></div>
+
+            <div class="table-responsive mb-4">
+                <table class="table align-middle">
+                    <thead>
+                        <tr>
+                            <th>Metrik</th>
+                            <th>Anahtar</th>
+                            <th>Override Mod</th>
+                            <th>Efektif Mod</th>
+                            <th>Son Calisma</th>
+                            <th></th>
+                            <th class="text-end">Islem</th>
+                        </tr>
+                    </thead>
+                    <tbody id="itemsTableBody">
+                        <tr><td colspan="7" class="text-muted">Yukleniyor...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <h3 class="section-title mb-3">Son Sonuclar</h3>
+            <div class="table-responsive">
+                <table class="table align-middle">
+                    <thead>
+                        <tr>
+                            <th>Anahtar</th>
+                            <th>Durum</th>
+                            <th>Deger</th>
+                            <th>Zaman</th>
+                        </tr>
+                    </thead>
+                    <tbody id="logsTableBody">
+                        <tr><td colspan="4" class="text-muted">Yukleniyor...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+            <div id="logsPagination" class="pagination-bar"></div>
+        </div>
+    </div>
+</div>
+</main>
+</div>
+
+<!-- Grup Ekle/Duzenle Modal -->
+<div class="modal fade" id="groupModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="groupModalTitle">Metrik Grubu Ekle</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div id="groupModalAlert" class="alert alert-danger d-none"></div>
+                <form id="groupForm">
+                    <input type="hidden" id="groupId">
+                    <div class="mb-3">
+                        <label class="form-label">Ad</label>
+                        <input type="text" class="form-control" id="groupName" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Varsayilan Calisma Modu</label>
+                        <select class="form-select" id="groupDefaultMode" required>
+                            <option value="PERIODIC">PERIODIC (surekli)</option>
+                            <option value="ON_DEMAND">ON_DEMAND (tetiklemeyle)</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Aralik (saniye)</label>
+                        <input type="number" class="form-control" id="groupInterval" min="1" value="15" required>
+                    </div>
+                    <button type="submit" class="btn btn-primary w-100">Kaydet</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Grup Sil Onay Modal -->
+<div class="modal fade" id="deleteGroupModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Grubu Sil</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p>Bu grubu ve icerdigi tum metrik iliskilerini silmek istediginize emin misiniz?</p>
+                <button id="confirmDeleteGroupBtn" class="btn btn-danger w-100">Sil</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Gruba Metrik Ekle Modal -->
+<div class="modal fade" id="itemModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Gruba Metrik Ekle</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div id="itemModalAlert" class="alert alert-danger d-none"></div>
+                <form id="itemForm">
+                    <div class="mb-3">
+                        <label class="form-label">Metrik Tanimi</label>
+                        <select class="form-select" id="itemMetricDefinitionId" required>
+                            <option value="">-- Secin --</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Calisma Modu (bos = grup varsayilanini kullan)</label>
+                        <select class="form-select" id="itemOverrideMode">
+                            <option value="">-- Grup varsayilani --</option>
+                            <option value="PERIODIC">PERIODIC</option>
+                            <option value="ON_DEMAND">ON_DEMAND</option>
+                        </select>
+                    </div>
+                    <button type="submit" class="btn btn-primary w-100">Ekle</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Metrik Grafigi Modal -->
+<div class="modal fade" id="metricChartModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="metricChartModalTitle">Metrik Grafigi</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div id="metricChartEmpty" class="text-muted d-none">Bu metrik icin sayisal gecmis veri bulunamadi.</div>
+                <canvas id="metricChartCanvas"></canvas>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
+<script src="assets/auth.js"></script>
+<script src="assets/nav.js"></script>
+<script src="assets/toast.js"></script>
+<script src="assets/custom-select.js"></script>
+<script>
+    requireAuth();
+
+    const role = getRole();
+    const canManage = role === 'OPERATOR' || role === 'ADMIN';
+
+    renderShell('metric-groups');
+    if (canManage) {
+        document.getElementById('addGroupBtn').classList.remove('d-none');
+        document.getElementById('addItemBtn').classList.remove('d-none');
+    }
+
+    // ---------------- Sayfalama yardimcisi (Son Sonuclar icin) ----------------
+
+    function createPaginator(tbodyEl, paginationEl, renderRowFn, emptyMessage) {
+        let rows = [];
+        let pageSize = 10;
+        let currentPage = 1;
+
+        function totalPages() {
+            return Math.max(1, Math.ceil(rows.length / pageSize));
+        }
+
+        function renderControls() {
+            if (rows.length === 0) {
+                paginationEl.innerHTML = '';
+                return;
+            }
+            const pages = totalPages();
+            paginationEl.innerHTML = `
+                <div class="d-flex align-items-center gap-2">
+                    <label class="form-label mb-0 small text-muted">Sayfa basina kayit</label>
+                    <select class="form-select form-select-sm" style="width:auto" data-role="page-size">
+                        ${[5, 10, 25, 50, 100].map(n => `<option value="${n}" ${n === pageSize ? 'selected' : ''}>${n}</option>`).join('')}
+                    </select>
+                </div>
+                <nav>
+                    <ul class="pagination pagination-sm mb-0">
+                        <li class="page-item ${currentPage === 1 ? 'disabled' : ''}"><button type="button" class="page-link" data-role="first">Ilk</button></li>
+                        <li class="page-item ${currentPage === 1 ? 'disabled' : ''}"><button type="button" class="page-link" data-role="prev">Onceki</button></li>
+                        <li class="page-item disabled"><span class="page-link">Sayfa ${currentPage} / ${pages}</span></li>
+                        <li class="page-item ${currentPage === pages ? 'disabled' : ''}"><button type="button" class="page-link" data-role="next">Sonraki</button></li>
+                        <li class="page-item ${currentPage === pages ? 'disabled' : ''}"><button type="button" class="page-link" data-role="last">Son</button></li>
+                    </ul>
+                </nav>
+            `;
+            paginationEl.querySelector('[data-role="page-size"]').addEventListener('change', (e) => {
+                pageSize = Number(e.target.value);
+                currentPage = 1;
+                render();
+            });
+            const go = (page) => { currentPage = page; render(); };
+            paginationEl.querySelector('[data-role="first"]').addEventListener('click', () => go(1));
+            paginationEl.querySelector('[data-role="prev"]').addEventListener('click', () => go(Math.max(1, currentPage - 1)));
+            paginationEl.querySelector('[data-role="next"]').addEventListener('click', () => go(Math.min(totalPages(), currentPage + 1)));
+            paginationEl.querySelector('[data-role="last"]').addEventListener('click', () => go(totalPages()));
+        }
+
+        function render() {
+            if (rows.length === 0) {
+                tbodyEl.innerHTML = emptyMessage;
+                paginationEl.innerHTML = '';
+                return;
+            }
+            const pages = totalPages();
+            if (currentPage > pages) currentPage = pages;
+            const start = (currentPage - 1) * pageSize;
+            tbodyEl.innerHTML = '';
+            rows.slice(start, start + pageSize).forEach(row => tbodyEl.appendChild(renderRowFn(row)));
+            renderControls();
+        }
+
+        return {
+            // Full reload (group switch, manual refresh) - jumps back to page 1.
+            setRows(newRows) {
+                rows = newRows;
+                currentPage = 1;
+                render();
+            },
+            // Live-refresh tick - keeps whatever page/pageSize the user is on.
+            refreshInPlace(newRows) {
+                rows = newRows;
+                render();
+            },
+        };
+    }
+
+    // ---------------- Metrik Tanimi secimi (Gruba Metrik Ekle modali icin) ----------------
+
+    async function loadDefinitionsForItemSelect() {
+        try {
+            const res = await authFetch('/api/metric-definitions');
+            if (!res.ok) throw new Error('failed');
+            const definitions = await res.json();
+            const select = document.getElementById('itemMetricDefinitionId');
+            select.innerHTML = '<option value="">-- Secin --</option>';
+            // Only APPROVED metrics can ever be attached to a group - the backend
+            // enforces this too (409), this just keeps the picker honest.
+            definitions.filter(d => d.approvalStatus === 'APPROVED').forEach(d => {
+                const opt = document.createElement('option');
+                opt.value = d.id;
+                opt.textContent = `${d.name} (${d.metricKey})`;
+                select.appendChild(opt);
+            });
+        } catch (err) {
+            // sessizce vazgec - modal acildiginda bos secim listesiyle kalir
+        }
+    }
+
+    // ---------------- Sunucular / Metrik Gruplari ----------------
+
+    const groupServerSelect = createCustomSelect(document.getElementById('groupServerSelect'), {
+        placeholder: '-- Sunucu listesi yukleniyor --',
+        onChange: () => {
+            hideGroupDetail();
+            loadGroups();
+        },
+    });
+    let groupsById = {};
+    let selectedGroupId = null;
+
+    async function loadServersForGroups() {
+        try {
+            const res = await authFetch('/api/servers');
+            if (!res.ok) throw new Error('failed');
+            const servers = await res.json();
+
+            if (servers.length === 0) {
+                groupServerSelect.disable('Henuz kayitli sunucu yok');
+                return;
+            }
+            groupServerSelect.setOptions(servers.map(s => ({ value: s.id, label: s.hostname })), '-- Sunucu secin --');
+        } catch (err) {
+            groupServerSelect.disable('Sunucu listesi yuklenemedi');
+        }
+    }
+
+    async function loadGroups() {
+        const serverId = groupServerSelect.getValue();
+        const tbody = document.getElementById('groupsTableBody');
+        const alertEl = document.getElementById('groupsAlert');
+        alertEl.classList.add('d-none');
+
+        if (!serverId) {
+            tbody.innerHTML = '<tr><td colspan="4" class="text-muted">Once bir sunucu secin</td></tr>';
+            return;
+        }
+
+        try {
+            const res = await authFetch(`/api/metric-groups?serverId=${serverId}`);
+            if (!res.ok) throw new Error('failed');
+            const groups = await res.json();
+
+            groupsById = {};
+            if (groups.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="4" class="text-muted">Bu sunucu icin grup yok</td></tr>';
+                return;
+            }
+
+            tbody.innerHTML = '';
+            groups.forEach(g => {
+                groupsById[g.id] = g;
+                const tr = document.createElement('tr');
+                const manageActions = canManage
+                    ? `<button class="btn btn-outline-secondary btn-sm me-1" data-action="edit-group" data-id="${g.id}">Duzenle</button>
+                       <button class="btn btn-outline-danger btn-sm me-1" data-action="delete-group" data-id="${g.id}">Sil</button>`
+                    : '';
+                tr.innerHTML = `
+                    <td>${escapeHtml(g.name)}</td>
+                    <td><span class="badge badge-mode-${g.defaultExecutionMode}">${g.defaultExecutionMode}</span></td>
+                    <td>${g.intervalSeconds}</td>
+                    <td class="text-end">
+                        <button class="btn btn-outline-primary btn-sm me-1" data-action="detail-group" data-id="${g.id}">Detay</button>
+                        ${manageActions}
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+
+            tbody.querySelectorAll('[data-action="detail-group"]').forEach(btn => {
+                btn.addEventListener('click', () => showGroupDetail(btn.dataset.id));
+            });
+            tbody.querySelectorAll('[data-action="edit-group"]').forEach(btn => {
+                btn.addEventListener('click', () => openGroupModal(groupsById[btn.dataset.id]));
+            });
+            tbody.querySelectorAll('[data-action="delete-group"]').forEach(btn => {
+                btn.addEventListener('click', () => openDeleteGroupModal(btn.dataset.id));
+            });
+        } catch (err) {
+            tbody.innerHTML = '<tr><td colspan="4" class="text-muted">Yuklenemedi</td></tr>';
+        }
+    }
+
+    function openGroupModal(group) {
+        const modalTitle = document.getElementById('groupModalTitle');
+        document.getElementById('groupModalAlert').classList.add('d-none');
+        if (group) {
+            modalTitle.textContent = 'Metrik Grubunu Duzenle';
+            document.getElementById('groupId').value = group.id;
+            document.getElementById('groupName').value = group.name;
+            document.getElementById('groupDefaultMode').value = group.defaultExecutionMode;
+            document.getElementById('groupInterval').value = group.intervalSeconds;
+        } else {
+            modalTitle.textContent = 'Metrik Grubu Ekle';
+            document.getElementById('groupForm').reset();
+            document.getElementById('groupId').value = '';
+            document.getElementById('groupInterval').value = 15;
+        }
+        bootstrap.Modal.getOrCreateInstance(document.getElementById('groupModal')).show();
+    }
+
+    document.getElementById('addGroupBtn').addEventListener('click', () => {
+        if (!groupServerSelect.getValue()) {
+            showToast('Once bir sunucu secin', 'warning');
+            return;
+        }
+        openGroupModal(null);
+    });
+
+    document.getElementById('groupForm').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const alertEl = document.getElementById('groupModalAlert');
+        alertEl.classList.add('d-none');
+
+        const id = document.getElementById('groupId').value;
+        const payload = {
+            serverId: Number(groupServerSelect.getValue()),
+            name: document.getElementById('groupName').value,
+            defaultExecutionMode: document.getElementById('groupDefaultMode').value,
+            intervalSeconds: Number(document.getElementById('groupInterval').value),
+        };
+
+        try {
+            const res = await authFetch(id ? `/api/metric-groups/${id}` : '/api/metric-groups', {
+                method: id ? 'PUT' : 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload),
+            });
+            const data = await res.json().catch(() => ({}));
+            if (!res.ok) {
+                alertEl.textContent = data.error || 'Kaydetme basarisiz';
+                alertEl.classList.remove('d-none');
+                return;
+            }
+            bootstrap.Modal.getInstance(document.getElementById('groupModal')).hide();
+            await loadGroups();
+        } catch (err) {
+            alertEl.textContent = 'Sunucuya baglanilamadi';
+            alertEl.classList.remove('d-none');
+        }
+    });
+
+    let pendingDeleteGroupId = null;
+
+    function openDeleteGroupModal(id) {
+        pendingDeleteGroupId = id;
+        bootstrap.Modal.getOrCreateInstance(document.getElementById('deleteGroupModal')).show();
+    }
+
+    document.getElementById('confirmDeleteGroupBtn').addEventListener('click', async () => {
+        if (!pendingDeleteGroupId) return;
+        try {
+            const res = await authFetch(`/api/metric-groups/${pendingDeleteGroupId}`, { method: 'DELETE' });
+            if (!res.ok) {
+                const data = await res.json().catch(() => ({}));
+                document.getElementById('groupsAlert').textContent = data.error || 'Silme basarisiz';
+                document.getElementById('groupsAlert').classList.remove('d-none');
+            } else {
+                if (String(selectedGroupId) === String(pendingDeleteGroupId)) {
+                    hideGroupDetail();
+                }
+                await loadGroups();
+            }
+        } finally {
+            pendingDeleteGroupId = null;
+            bootstrap.Modal.getInstance(document.getElementById('deleteGroupModal')).hide();
+        }
+    });
+
+    // ---------------- Grup Detayi (Items + Fetch Now + Loglar) ----------------
+
+    function hideGroupDetail() {
+        stopLiveStream();
+        selectedGroupId = null;
+        document.getElementById('groupDetailCard').classList.add('d-none');
+    }
+
+    async function showGroupDetail(groupId) {
+        stopLiveStream();
+        previousLogIds = new Set();
+        selectedGroupId = groupId;
+        document.getElementById('groupDetailCard').classList.remove('d-none');
+        document.getElementById('fetchNowAlert').classList.add('d-none');
+        const group = groupsById[groupId];
+        document.getElementById('groupDetailTitle').textContent = group ? `Grup Detayi: ${group.name}` : 'Grup Detayi';
+        await Promise.all([loadItems(), loadLogs()]);
+    }
+
+    async function loadItems() {
+        const tbody = document.getElementById('itemsTableBody');
+        const alertEl = document.getElementById('itemsAlert');
+        alertEl.classList.add('d-none');
+        try {
+            const res = await authFetch(`/api/metric-groups/${selectedGroupId}`);
+            if (!res.ok) throw new Error('failed');
+            const detail = await res.json();
+
+            if (detail.items.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="7" class="text-muted">Bu grupta metrik yok</td></tr>';
+                return;
+            }
+
+            tbody.innerHTML = '';
+            detail.items.forEach(item => {
+                const tr = document.createElement('tr');
+                const manageActions = canManage
+                    ? `<button class="btn btn-outline-danger btn-sm" data-action="remove-item" data-id="${item.id}">Kaldir</button>`
+                    : '';
+                tr.innerHTML = `
+                    <td>${escapeHtml(item.metricDefinitionName)}</td>
+                    <td><code>${escapeHtml(item.metricKey)}</code></td>
+                    <td>${item.overrideExecutionMode ? `<span class="badge badge-mode-${item.overrideExecutionMode}">${item.overrideExecutionMode}</span>` : '<span class="text-muted">-</span>'}</td>
+                    <td><span class="badge badge-mode-${item.effectiveExecutionMode}">${item.effectiveExecutionMode}</span></td>
+                    <td>${item.lastRunAt ? new Date(item.lastRunAt).toLocaleString('tr-TR') : '<span class="text-muted">Hic calismadi</span>'}</td>
+                    <td><button class="btn btn-outline-primary btn-sm" data-action="chart-item" data-key="${escapeHtml(item.metricKey)}" data-name="${escapeHtml(item.metricDefinitionName)}"><i class="bi bi-graph-up"></i></button></td>
+                    <td class="text-end">${manageActions}</td>
+                `;
+                tbody.appendChild(tr);
+            });
+
+            tbody.querySelectorAll('[data-action="remove-item"]').forEach(btn => {
+                btn.addEventListener('click', () => removeItem(btn.dataset.id));
+            });
+            tbody.querySelectorAll('[data-action="chart-item"]').forEach(btn => {
+                btn.addEventListener('click', () => openMetricChart(btn.dataset.key, btn.dataset.name));
+            });
+        } catch (err) {
+            tbody.innerHTML = '<tr><td colspan="7" class="text-muted">Yuklenemedi</td></tr>';
+        }
+    }
+
+    document.getElementById('itemModal').addEventListener('show.bs.modal', () => {
+        loadDefinitionsForItemSelect();
+    });
+
+    document.getElementById('itemForm').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const alertEl = document.getElementById('itemModalAlert');
+        alertEl.classList.add('d-none');
+
+        const metricDefinitionId = document.getElementById('itemMetricDefinitionId').value;
+        const overrideExecutionMode = document.getElementById('itemOverrideMode').value || null;
+
+        if (!metricDefinitionId) {
+            alertEl.textContent = 'Bir metrik tanimi secin';
+            alertEl.classList.remove('d-none');
+            return;
+        }
+
+        try {
+            const res = await authFetch(`/api/metric-groups/${selectedGroupId}/items`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ metricDefinitionId: Number(metricDefinitionId), overrideExecutionMode }),
+            });
+            const data = await res.json().catch(() => ({}));
+            if (!res.ok) {
+                alertEl.textContent = data.error || 'Ekleme basarisiz';
+                alertEl.classList.remove('d-none');
+                return;
+            }
+            document.getElementById('itemForm').reset();
+            bootstrap.Modal.getInstance(document.getElementById('itemModal')).hide();
+            await loadItems();
+        } catch (err) {
+            alertEl.textContent = 'Sunucuya baglanilamadi';
+            alertEl.classList.remove('d-none');
+        }
+    });
+
+    async function removeItem(itemId) {
+        if (!(await showConfirm('Bu metrigi gruptan kaldirmak istediginize emin misiniz?', { danger: true, confirmLabel: 'Kaldir' }))) return;
+        try {
+            const res = await authFetch(`/api/metric-groups/${selectedGroupId}/items/${itemId}`, { method: 'DELETE' });
+            if (!res.ok) {
+                const data = await res.json().catch(() => ({}));
+                document.getElementById('itemsAlert').textContent = data.error || 'Kaldirma basarisiz';
+                document.getElementById('itemsAlert').classList.remove('d-none');
+                return;
+            }
+            await loadItems();
+        } catch (err) {
+            document.getElementById('itemsAlert').textContent = 'Sunucuya baglanilamadi';
+            document.getElementById('itemsAlert').classList.remove('d-none');
+        }
+    }
+
+    let previousLogIds = new Set();
+    let logsNewIds = new Set();
+
+    function renderLogRow(log) {
+        const tr = document.createElement('tr');
+        if (logsNewIds.has(log.id)) {
+            tr.classList.add('table-success');
+            setTimeout(() => tr.classList.remove('table-success'), 2000);
+        }
+        tr.innerHTML = `
+            <td><code>${escapeHtml(log.metricKey)}</code></td>
+            <td><span class="badge badge-success-${log.success}">${log.success ? 'Basarili' : 'Basarisiz'}</span></td>
+            <td><pre class="payload-preview">${escapeHtml(formatPayloadPreview(log.resultPayload))}</pre></td>
+            <td>${new Date(log.createdAt).toLocaleString('tr-TR')}</td>
+        `;
+        return tr;
+    }
+
+    const logsPaginator = createPaginator(
+        document.getElementById('logsTableBody'),
+        document.getElementById('logsPagination'),
+        renderLogRow,
+        '<tr><td colspan="4" class="text-muted">Henuz sonuc yok</td></tr>'
+    );
+
+    async function loadLogs(resetPage = true) {
+        try {
+            const res = await authFetch(`/api/metric-groups/${selectedGroupId}/logs`);
+            if (!res.ok) throw new Error('failed');
+            const logs = await res.json();
+
+            const currentIds = new Set(logs.map(l => l.id));
+            logsNewIds = previousLogIds.size === 0
+                ? new Set()
+                : new Set([...currentIds].filter(id => !previousLogIds.has(id)));
+            previousLogIds = currentIds;
+
+            if (resetPage) {
+                logsPaginator.setRows(logs);
+            } else {
+                logsPaginator.refreshInPlace(logs);
+            }
+        } catch (err) {
+            document.getElementById('logsTableBody').innerHTML = '<tr><td colspan="4" class="text-muted">Yuklenemedi</td></tr>';
+        }
+    }
+
+    // ---------------- Metrik Grafigi (Son Sonuclar icindeki sayisal degerlerden) ----------------
+
+    let metricChartInstance = null;
+
+    async function openMetricChart(metricKey, name) {
+        document.getElementById('metricChartModalTitle').textContent = `Metrik Grafigi: ${name}`;
+        document.getElementById('metricChartEmpty').classList.add('d-none');
+        bootstrap.Modal.getOrCreateInstance(document.getElementById('metricChartModal')).show();
+
+        try {
+            const res = await authFetch(`/api/metric-groups/${selectedGroupId}/logs`);
+            if (!res.ok) throw new Error('failed');
+            const logs = await res.json();
+
+            const points = logs
+                .filter(l => l.metricKey === metricKey && l.resultPayload && !isNaN(Number(l.resultPayload.value)))
+                .map(l => ({ x: new Date(l.createdAt), y: Number(l.resultPayload.value) }))
+                .sort((a, b) => a.x - b.x);
+
+            if (metricChartInstance) {
+                metricChartInstance.destroy();
+                metricChartInstance = null;
+            }
+
+            if (points.length === 0) {
+                document.getElementById('metricChartEmpty').classList.remove('d-none');
+                return;
+            }
+
+            metricChartInstance = new Chart(document.getElementById('metricChartCanvas'), {
+                type: 'line',
+                data: {
+                    labels: points.map(p => p.x.toLocaleString('tr-TR')),
+                    datasets: [{ label: metricKey, data: points.map(p => p.y), borderColor: '#3f7cae', backgroundColor: 'rgba(63,124,174,0.12)', tension: 0.3 }],
+                },
+                options: { responsive: true, plugins: { legend: { display: false } } },
+            });
+        } catch (err) {
+            document.getElementById('metricChartEmpty').classList.remove('d-none');
+        }
+    }
+
+    // ---------------- Canli Akis (her 3 saniyede bir Son Sonuclar tablosunu yeniler) ----------------
+
+    let liveStreamTimer = null;
+
+    function stopLiveStream() {
+        if (liveStreamTimer) {
+            clearInterval(liveStreamTimer);
+            liveStreamTimer = null;
+        }
+        const btn = document.getElementById('liveStreamToggleBtn');
+        btn.textContent = '🟢 Canli Akis Ac';
+        btn.classList.remove('btn-success');
+        btn.classList.add('btn-outline-success');
+    }
+
+    document.getElementById('liveStreamToggleBtn').addEventListener('click', () => {
+        const btn = document.getElementById('liveStreamToggleBtn');
+        if (liveStreamTimer) {
+            stopLiveStream();
+            return;
+        }
+        btn.textContent = '🔴 Canli Akis Durdur';
+        btn.classList.remove('btn-outline-success');
+        btn.classList.add('btn-success');
+        liveStreamTimer = setInterval(() => loadLogs(false), 3000);
+    });
+
+    // ---------------- Fetch Now (bounded poll, then fall back to pollUrl) ----------------
+
+    document.getElementById('fetchNowBtn').addEventListener('click', async () => {
+        if (!selectedGroupId) return;
+        const btn = document.getElementById('fetchNowBtn');
+        const alertEl = document.getElementById('fetchNowAlert');
+        alertEl.classList.remove('alert-danger');
+        alertEl.classList.add('alert-info');
+        alertEl.textContent = 'Metrikler getiriliyor, lutfen bekleyin...';
+        alertEl.classList.remove('d-none');
+        btn.disabled = true;
+
+        try {
+            const res = await authFetch(`/api/metric-groups/${selectedGroupId}/fetch-now`, { method: 'POST' });
+            const data = await res.json().catch(() => ({}));
+
+            if (res.status === 403) {
+                alertEl.classList.remove('alert-info');
+                alertEl.classList.add('alert-danger');
+                alertEl.textContent = data.error || 'Bu islem icin yetkiniz yok';
+                return;
+            }
+            if (!res.ok && res.status !== 202) {
+                alertEl.classList.remove('alert-info');
+                alertEl.classList.add('alert-danger');
+                alertEl.textContent = data.error || 'Getirme basarisiz';
+                return;
+            }
+
+            if (data.status === 'COMPLETED') {
+                alertEl.textContent = 'Metrikler basariyla getirildi.';
+                await loadLogs();
+                await loadItems();
+                return;
+            }
+
+            // 202 PENDING - agent henuz cevap vermedi, pollUrl uzerinden takip et.
+            await pollFetchStatus(data.fetchRequestId, alertEl);
+        } catch (err) {
+            alertEl.classList.remove('alert-info');
+            alertEl.classList.add('alert-danger');
+            alertEl.textContent = 'Sunucuya baglanilamadi';
+        } finally {
+            btn.disabled = false;
+        }
+    });
+
+    async function pollFetchStatus(fetchRequestId, alertEl) {
+        const maxAttempts = 15;
+        for (let i = 0; i < maxAttempts; i++) {
+            await new Promise(r => setTimeout(r, 2000));
+            try {
+                const res = await authFetch(`/api/metric-groups/fetch-requests/${fetchRequestId}`);
+                if (!res.ok) continue;
+                const status = await res.json();
+                if (status.status === 'COMPLETED') {
+                    alertEl.classList.remove('alert-info');
+                    alertEl.classList.add('alert-success');
+                    alertEl.textContent = 'Metrikler basariyla getirildi.';
+                    await loadLogs();
+                    await loadItems();
+                    return;
+                }
+                if (status.status === 'TIMED_OUT') {
+                    alertEl.classList.remove('alert-info');
+                    alertEl.classList.add('alert-danger');
+                    alertEl.textContent = 'Sunucudaki agent zaman asimina ugradi (yanit vermedi).';
+                    return;
+                }
+            } catch (err) {
+                // sessizce bir sonraki denemeye gec
+            }
+        }
+        alertEl.classList.remove('alert-info');
+        alertEl.classList.add('alert-danger');
+        alertEl.textContent = 'Agent hala yanit vermedi. Durumu daha sonra tekrar kontrol edin.';
+    }
+
+    // ---------------- Yardimcilar ----------------
+
+    function escapeHtml(value) {
+        if (value === null || value === undefined) return '';
+        return String(value)
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;');
+    }
+
+    /**
+     * Log tablosundaki sonuc onizlemesi icin: ham JSON.stringify ciktisi
+     * "value" alani icindeki gercek satir sonlarini (orn. /proc/meminfo
+     * ciktisi) kacis dizisi olarak "\n" seklinde duz metin gosteriyordu.
+     * Bunun yerine "value" ve varsa "error" alanlarini duz metin olarak,
+     * gercek satir sonlariyla goster.
+     */
+    function formatPayloadPreview(payload) {
+        if (payload === null || payload === undefined) return '';
+        if (typeof payload === 'object') {
+            const parts = [];
+            if (payload.value !== undefined && payload.value !== null && payload.value !== '') {
+                parts.push(String(payload.value));
+            }
+            if (payload.error) {
+                parts.push('Hata: ' + payload.error);
+            }
+            if (parts.length > 0) {
+                return parts.join('\n');
+            }
+            return JSON.stringify(payload, null, 2);
+        }
+        return String(payload);
+    }
+
+    // ---------------- Baslangic ----------------
+
+    loadServersForGroups();
+</script>
+</body>
+</html>
