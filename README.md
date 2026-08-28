@@ -63,23 +63,45 @@ Built for environments where every dependency, container image, and AI model mus
 
 ---
 
+## 📸 Screenshots
+
+### 🖥️ Live Dashboard — CPU / RAM / Disk
+
+<p align="center">
+  <img src="screenshots/dashboard.png" width="100%" alt="Live Dashboard" />
+</p>
+
+### 📊 Metric Catalog & Custom Command Definitions
+
+<p align="center">
+  <img src="screenshots/metrics.png" width="100%" alt="Metric Catalog" />
+</p>
+
+### 🗂️ Metric Groups — Periodic & On-Demand Collection
+
+<p align="center">
+  <img src="screenshots/metric_groups.png" width="100%" alt="Metric Groups" />
+</p>
+
+### 🛡️ Config Tracker — Drift Detection
+
+<p align="center">
+  <img src="screenshots/config_drift.png" width="100%" alt="Config Drift Tracker" />
+</p>
+
+### 🤖 AI Takip & Analiz — Offline AIOps Assistant
+
+<p align="center">
+  <img src="screenshots/ai_takip.png" width="100%" alt="AIOps Assistant" />
+</p>
+
+---
+
 ## 🏗️ Architecture
 
-```
-┌───────────────────────┐    one-way, HMAC-signed HTTP    ┌───────────────────────────┐
-│    Linux Target Host   │ ───────────────────────────────▶│   Backend / Monitoring     │
-│   (Monitoring Agent)    │                                 │   Service (Spring Boot)    │
-│  outbound-only, no      │◀──── polls for work ─────────── │                             │
-│  listening port         │      (fetch_sync)               └──────────────┬──────────────┘
-└───────────────────────┘                                                  │
-                                                        fan-out, executed in parallel
-                                    ┌────────────────────────────┼────────────────────────────┐
-                                    ▼                             ▼                             ▼
-                       ┌─────────────────────┐       ┌─────────────────────┐       ┌─────────────────────┐
-                       │      PostgreSQL       │       │     AIOps Module      │       │  Notification System  │
-                       │      (Database)        │       │  (Ollama, local LLM)   │       │   (Email / in-app)      │
-                       └─────────────────────┘       └─────────────────────┘       └─────────────────────┘
-```
+<p align="center">
+  <img src="screenshots/system.jpg" width="100%" alt="System Architecture Diagram" />
+</p>
 
 Every inbound agent request results in **one synchronous, authenticated write** to PostgreSQL, followed by a **non-blocking, parallel fan-out** to the AIOps scheduler (`@Scheduled` / `@Async`) and the notification pipeline. A slow AI job or an unreachable SMTP relay can never create backpressure on metric ingestion from hundreds of agents.
 
